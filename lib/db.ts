@@ -17,14 +17,46 @@ export const collections = {
   courseKnowledge: "course_knowledge",
 } as const;
 
+function buildMongoUri() {
+  if (process.env.MONGODB_URI?.trim()) {
+    return process.env.MONGODB_URI.trim();
+  }
+
+  const username = (process.env.MONGODB_USERNAME || "fullstack").trim();
+  const password = process.env.MONGODB_PASSWORD || "";
+  const host = (process.env.MONGODB_CLUSTER_HOST || "learnhub.07ozegd.mongodb.net").trim();
+  const appName = (process.env.MONGODB_APP_NAME || "learnhub").trim();
+
+  if (!password) return null;
+
+  return (
+    "mongodb+srv://" +
+    encodeURIComponent(username) +
+    ":" +
+    encodeURIComponent(password) +
+    "@" +
+    host +
+    "/?retryWrites=true&w=majority&appName=" +
+    encodeURIComponent(appName)
+  );
+}
+
 export function isDatabaseConfigured() {
-  return Boolean(process.env.MONGODB_URI);
+  return Boolean(buildMongoUri());
+}
+
+export function databaseConfigSource() {
+  if (process.env.MONGODB_URI?.trim()) return "MONGODB_URI";
+  if (process.env.MONGODB_PASSWORD) return "structured-atlas-env";
+  return "not-configured";
 }
 
 async function getClient() {
-  const uri = process.env.MONGODB_URI;
+  const uri = buildMongoUri();
   if (!uri) {
-    throw new Error("MONGODB_URI is not configured.");
+    throw new Error(
+      "MongoDB is not configured. Set MONGODB_PASSWORD or provide a complete MONGODB_URI.",
+    );
   }
 
   if (!clientPromise) {
@@ -32,6 +64,8 @@ async function getClient() {
       maxPoolSize: 10,
       minPoolSize: 0,
       serverSelectionTimeoutMS: 8000,
+      connectTimeoutMS: 10000,
+      retryWrites: true,
     });
     clientPromise = client.connect();
   }
