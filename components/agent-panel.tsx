@@ -26,6 +26,9 @@ export default function AgentPanel({
   );
   const [actions, setActions] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [service, setService] = useState<{ status: "idle" | "live" | "fallback"; error?: string }>({
+    status: "idle",
+  });
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -33,6 +36,8 @@ export default function AgentPanel({
     setBusy(true);
     setReply("Thinking through the best learning move…");
     setActions([]);
+    setService({ status: "idle" });
+
     try {
       const response = await fetch("/api/agent", {
         method: "POST",
@@ -42,8 +47,13 @@ export default function AgentPanel({
       const data = await response.json();
       setReply(data.reply || "I could not generate a response.");
       setActions(data.nextActions || []);
+      setService({
+        status: data.aiStatus === "live" ? "live" : "fallback",
+        error: data.aiErrorCode || undefined,
+      });
     } catch {
       setReply("The mentor service is temporarily unavailable. Keep building and try again.");
+      setService({ status: "fallback", error: "network-error" });
     } finally {
       setBusy(false);
     }
@@ -56,8 +66,20 @@ export default function AgentPanel({
           <span className="eyebrow">MABRIG MENTOR SWARM</span>
           <h2>One learner. Five expert agents.</h2>
         </div>
-        <span className="liveDot">● adaptive</span>
+        <span className={service.status === "fallback" ? "liveDot agentFallback" : "liveDot"}>
+          {service.status === "live"
+            ? "● live AI"
+            : service.status === "fallback"
+              ? "● fallback"
+              : "● adaptive"}
+        </span>
       </div>
+
+      {service.status === "fallback" && (
+        <div className="agentServiceNotice">
+          Live AI did not answer. Provider diagnostic: <strong>{service.error || "unavailable"}</strong>.
+        </div>
+      )}
 
       <div className="agentModes">
         {modes.map((item) => (
