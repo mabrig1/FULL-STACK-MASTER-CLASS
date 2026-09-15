@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { callAI } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { loadAgentMemories, saveAgentMemory } from "@/lib/memory";
-import { retrieveCourseContext } from "@/lib/rag";
+import { retrieveCourseContextHybrid } from "@/lib/rag";
 
 type AgentMode = "tutor" | "code-review" | "project-coach" | "quiz" | "career";
 
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
   }
 
   const user = await getCurrentUser();
-  const retrieval = retrieveCourseContext(message + " " + context, 4);
+  const retrieval = await retrieveCourseContextHybrid(message + " " + context, 4);
   const memories = user ? await loadAgentMemories(user.id, 5) : [];
 
   const grounding = retrieval
