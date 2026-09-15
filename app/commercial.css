@@ -1,0 +1,133 @@
+.commercialPage {
+  min-height: 72vh;
+  padding: 70px 7vw 110px;
+}
+.authShell {
+  display: grid;
+  place-items: center;
+}
+.authCard {
+  width: min(560px, 100%);
+  padding: 34px;
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  background: linear-gradient(145deg, rgba(123,247,181,.07), rgba(255,255,255,.02));
+  box-shadow: var(--shadow);
+}
+.authCard h1, .commercialHero h1 {
+  font-size: clamp(42px, 6vw, 76px);
+  line-height: .95;
+  letter-spacing: -.055em;
+  margin: 16px 0;
+}
+.authCard > p, .commercialHero > p, .accountPanel > p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+.stackForm {
+  display: grid;
+  gap: 12px;
+  margin: 26px 0 18px;
+}
+.stackForm input, .stackForm textarea, .stackForm select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #071410;
+  color: var(--text);
+  padding: 14px 15px;
+  outline: none;
+}
+.stackForm input:focus, .stackForm textarea:focus, .stackForm select:focus {
+  border-color: rgba(123,247,181,.55);
+}
+.formError {
+  padding: 11px 13px;
+  border-radius: 11px;
+  background: rgba(255,155,143,.08);
+  color: var(--danger);
+  font-size: 13px;
+}
+.authCard small a { color: var(--accent); }
+.accountFacts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 22px 0;
+}
+.accountFacts span {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.accountFacts strong { display: block; color: var(--text); margin-top: 5px; }
+.actionRow { display: flex; flex-wrap: wrap; gap: 9px; }
+.platformGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 13px;
+  margin-top: 44px;
+}
+.platformCard {
+  min-height: 220px;
+  padding: 25px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgba(255,255,255,.018);
+  transition: transform .15s ease, border-color .15s ease;
+}
+.platformCard:hover {
+  transform: translateY(-3px);
+  border-color: rgba(123,247,181,.35);
+}
+.platformCard span { color: var(--accent); font-size: 11px; letter-spacing: .12em; }
+.platformCard h3 { font-size: 24px; margin: 48px 0 9px; letter-spacing: -.03em; }
+.platformCard p { color: var(--muted); line-height: 1.55; }
+.commercialHero {
+  max-width: 980px;
+}
+.commercialHero > p { max-width: 720px; font-size: 18px; }
+.commercialSection {
+  margin-top: 35px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgba(255,255,255,.018);
+}
+.dataGrid {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 10px;
+}
+.dataGrid article {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.dataGrid strong { font-size: 28px; display: block; }
+.dataGrid span { color: var(--muted); font-size: 12px; }
+.tableLike { display: grid; gap: 8px; }
+.tableRow {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+}
+.statusGood { color: var(--accent); }
+.statusWarn { color: var(--accent-2); }
+.muted { color: var(--muted); }
+.mono { font-family: "SFMono-Regular", Consolas, monospace; }
+@media (max-width: 900px) {
+  .platformGrid { grid-template-columns: 1fr 1fr; }
+  .dataGrid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 620px) {
+  .commercialPage { padding-left: 20px; padding-right: 20px; }
+  .platformGrid, .dataGrid, .accountFacts { grid-template-columns: 1fr; }
+  .tableRow { grid-template-columns: 1fr; }
+}
