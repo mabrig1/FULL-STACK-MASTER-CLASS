@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { callAI, getAIErrorCode } from "@/lib/ai";
+import { callAI, getAIErrorCode, getAIStatus } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { loadAgentMemories, saveAgentMemory } from "@/lib/memory";
 import { retrieveCourseContextHybrid } from "@/lib/rag";
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Message is required." }, { status: 400 });
   }
 
-  const user = await getCurrentUser();
+  const aiConfig = getAIStatus();\n  const user = await getCurrentUser();
   const retrieval = await retrieveCourseContextHybrid(message + " " + context, 4);
   const memories = user ? await loadAgentMemories(user.id, 5) : [];
 
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     reply = null;
   }
 
-  const finalReply = reply || fallback(mode, message, context);
+  if (!reply && !aiErrorCode) {\n    aiErrorCode = aiConfig.configured ? "empty-provider-result" : "not-configured-in-agent-runtime";\n  }\n\n  const finalReply = reply || fallback(mode, message, context);
 
   if (user) {
     await saveAgentMemory({
