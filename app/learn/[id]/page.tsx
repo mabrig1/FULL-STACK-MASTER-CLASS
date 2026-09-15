@@ -13,7 +13,7 @@ export default async function LessonPage({
   const module = getModule(Number(id));
   if (!module) notFound();
 
-  const freeLimit = Math.max(1, Number(process.env.FREE_MODULE_LIMIT || "5"));
+  const freeLimit = Math.max(1, Number(process.env.FREE_MODULE_LIMIT || "1"));
   const user = await getCurrentUser();
   const hasPremiumAccess =
     module.id <= freeLimit ||
@@ -29,9 +29,8 @@ export default async function LessonPage({
           <span className="eyebrow">PREMIUM MASTERY MODULE · {module.phase}</span>
           <h1>{module.title}</h1>
           <p>
-            The first {freeLimit} modules are available as the foundation experience.
-            This module belongs to the full commercial Master Class and unlocks with
-            verified learner access.
+            Module 1 is free. Modules 2–{courseModules.length} are part of the full commercial
+            Master Class and unlock with verified learner access.
           </p>
         </section>
         <section className="commercialSection">
