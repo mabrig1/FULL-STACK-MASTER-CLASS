@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-export default function PricingPanel() {
+export default function PricingPanel({ priceNgn }: { priceNgn: number }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -12,7 +12,13 @@ export default function PricingPanel() {
     setBusy(true);
     fetch("/api/payments/verify?reference=" + encodeURIComponent(reference))
       .then(async (response) => ({ ok: response.ok, data: await response.json() }))
-      .then(({ ok, data }) => setMessage(ok ? "Payment verified. Master Class access is active." : data.error || "Payment could not be verified."))
+      .then(({ ok, data }) =>
+        setMessage(
+          ok
+            ? "Payment verified. Master Class access is active."
+            : data.error || "Payment could not be verified.",
+        ),
+      )
       .finally(() => setBusy(false));
   }, []);
 
@@ -33,11 +39,14 @@ export default function PricingPanel() {
       <section className="commercialHero">
         <span className="eyebrow">COMMERCIAL ACCESS</span>
         <h1>Invest in proof you can carry into the market.</h1>
-        <p>Checkout is initialized server-side and access is granted only after verified payment status.</p>
+        <p>
+          Checkout is initialized server-side and access is granted only after verified payment status.
+        </p>
       </section>
       <section className="pricingCard">
         <span className="eyebrow">FULL MASTER CLASS</span>
         <h2>Production Builder Access</h2>
+        <div className="priceTag">₦{priceNgn.toLocaleString()} <small>one-time access</small></div>
         <ul>
           <li>64-module mastery graph</li>
           <li>Persistent AI mentor memory</li>
@@ -46,7 +55,9 @@ export default function PricingPanel() {
           <li>Cohorts + peer review</li>
           <li>Evidence-backed certificate eligibility</li>
         </ul>
-        <button className="primaryButton" onClick={upgrade} disabled={busy}>{busy ? "Checking…" : "Start secure checkout"}</button>
+        <button className="primaryButton" onClick={upgrade} disabled={busy}>
+          {busy ? "Checking…" : "Start secure checkout"}
+        </button>
         {message && <div className="notice">{message}</div>}
       </section>
     </main>
