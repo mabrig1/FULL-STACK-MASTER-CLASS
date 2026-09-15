@@ -57,7 +57,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Message is required." }, { status: 400 });
   }
 
-  const aiConfig = getAIStatus();\n  const user = await getCurrentUser();
+  const aiConfig = getAIStatus();
+  const user = await getCurrentUser();
   const retrieval = await retrieveCourseContextHybrid(message + " " + context, 4);
   const memories = user ? await loadAgentMemories(user.id, 5) : [];
 
@@ -70,6 +71,8 @@ export async function POST(request: Request) {
     .join("\n");
 
   let reply: string | null = null;
+  let aiErrorCode: string | null = null;
+
   try {
     reply = await callAI(
       [
@@ -90,11 +93,18 @@ export async function POST(request: Request) {
       ],
       { temperature: mode === "quiz" ? 0.45 : 0.25 },
     );
-  } catch {
+  } catch (error) {
+    aiErrorCode = getAIErrorCode(error);
     reply = null;
   }
 
-  if (!reply && !aiErrorCode) {\n    aiErrorCode = aiConfig.configured ? "empty-provider-result" : "not-configured-in-agent-runtime";\n  }\n\n  const finalReply = reply || fallback(mode, message, context);
+  if (!reply && !aiErrorCode) {
+    aiErrorCode = aiConfig.configured
+      ? "empty-provider-result"
+      : "not-configured-in-agent-runtime";
+  }
+
+  const finalReply = reply || fallback(mode, message, context);
 
   if (user) {
     await saveAgentMemory({
@@ -114,5 +124,10 @@ export async function POST(request: Request) {
     source: reply ? "live-ai-rag-memory" : "built-in-coach",
     retrievedModules: retrieval.map((item) => item.moduleId),
     memoryEnabled: Boolean(user),
+    aiStatus: reply ? "live" : "fallback",
+    aiErrorCode,
+    aiProvider: aiConfig.provider,
+    aiModel: aiConfig.model,
+    aiConfiguredInAgentRuntime: aiConfig.configured,
   });
 }
