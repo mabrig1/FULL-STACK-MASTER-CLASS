@@ -3,26 +3,70 @@ export type AIMessage = {
   content: string;
 };
 
+type AIProvider = {
+  name: "openrouter" | "vercel-ai-gateway";
+  apiKey: string;
+  baseUrl: string;
+};
+
+function getProvider(): AIProvider | null {
+  const openRouterKey = process.env.OPENROUTER_API_KEY?.trim();
+  if (openRouterKey) {
+    return {
+      name: "openrouter",
+      apiKey: openRouterKey,
+      baseUrl: "https://openrouter.ai/api/v1",
+    };
+  }
+
+  const gatewayKey = process.env.AI_GATEWAY_API_KEY?.trim();
+  if (gatewayKey) {
+    return {
+      name: "vercel-ai-gateway",
+      apiKey: gatewayKey,
+      baseUrl: process.env.AI_GATEWAY_BASE_URL?.trim() || "https://ai-gateway.vercel.sh/v1",
+    };
+  }
+
+  return null;
+}
+
 export function isAIConfigured() {
-  return Boolean(process.env.AI_GATEWAY_API_KEY && process.env.AI_MODEL);
+  return Boolean(getProvider() && process.env.AI_MODEL?.trim());
+}
+
+export function getAIStatus() {
+  const provider = getProvider();
+  return {
+    configured: Boolean(provider && process.env.AI_MODEL?.trim()),
+    provider: provider?.name || null,
+    model: process.env.AI_MODEL?.trim() || null,
+    baseUrl: provider?.baseUrl || null,
+  };
 }
 
 export async function callAI(
   messages: AIMessage[],
   options: { temperature?: number; maxTokens?: number } = {},
 ): Promise<string | null> {
-  const apiKey = process.env.AI_GATEWAY_API_KEY;
-  const model = process.env.AI_MODEL;
-  const baseUrl = process.env.AI_GATEWAY_BASE_URL || "https://ai-gateway.vercel.sh/v1";
+  const provider = getProvider();
+  const model = process.env.AI_MODEL?.trim();
 
-  if (!apiKey || !model) return null;
+  if (!provider || !model) return null;
 
-  const response = await fetch(baseUrl.replace(/\/$/, "") + "/chat/completions", {
+  const headers: Record<string, string> = {
+    Authorization: "Bearer " + provider.apiKey,
+    "Content-Type": "application/json",
+  };
+
+  if (provider.name === "openrouter") {
+    headers["HTTP-Referer"] = process.env.APP_URL || "https://fullstack.mabrigkorie.org";
+    headers["X-Title"] = "Full Stack Master Class";
+  }
+
+  const response = await fetch(provider.baseUrl.replace(/\/$/, "") + "/chat/completions", {
     method: "POST",
-    headers: {
-      Authorization: "Bearer " + apiKey,
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({
       model,
       temperature: options.temperature ?? 0.25,
@@ -33,7 +77,9 @@ export async function callAI(
   });
 
   if (!response.ok) {
-    throw new Error("AI Gateway request failed with " + response.status);
+    const providerLabel =
+      provider.name === "openrouter" ? "OpenRouter" : "Vercel AI Gateway";
+    throw new Error(providerLabel + " request failed with " + response.status);
   }
 
   const data = await response.json();
