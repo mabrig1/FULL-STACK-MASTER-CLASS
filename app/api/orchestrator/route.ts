@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { callAI, parseJsonObject } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { loadAgentMemories, saveAgentMemory } from "@/lib/memory";
-import { retrieveCourseContext } from "@/lib/rag";
+import { retrieveCourseContextHybrid } from "@/lib/rag";
 
 type Specialist = "diagnostician" | "architect" | "builder" | "reviewer" | "career";
 
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   const task = String(body.task || "").trim().slice(0, 8000);
   if (!task) return NextResponse.json({ error: "Give the orchestrator a goal or problem." }, { status: 400 });
 
-  const retrieval = retrieveCourseContext(task, 5);
+  const retrieval = await retrieveCourseContextHybrid(task, 5);
   const memories = await loadAgentMemories(user.id, 6);
   const ground = retrieval.map((item) => "M" + item.moduleId + " " + item.title + ": " + item.challenge).join("\n");
   const memory = memories.map((item) => item.summary).filter(Boolean).join("\n");
