@@ -45,6 +45,10 @@ function getProvider(): AIProvider | null {
   return null;
 }
 
+function fallbackModel() {
+  return process.env.AI_FALLBACK_MODEL?.trim() || "openrouter/free";
+}
+
 export function isAIConfigured() {
   return Boolean(getProvider() && process.env.AI_MODEL?.trim());
 }
@@ -55,6 +59,7 @@ export function getAIStatus() {
     configured: Boolean(provider && process.env.AI_MODEL?.trim()),
     provider: provider?.name || null,
     model: process.env.AI_MODEL?.trim() || null,
+    fallbackModel: provider?.name === "openrouter" ? fallbackModel() : null,
     baseUrl: provider?.baseUrl || null,
   };
 }
@@ -148,28 +153,30 @@ export async function validateAIConfiguration() {
   }
 }
 
-export async function callAI(
-  messages: AIMessage[],
-  options: { temperature?: number; maxTokens?: number } = {},
-): Promise<string | null> {
-  const provider = getProvider();
-  const model = process.env.AI_MODEL?.trim();
-
-  if (!provider || !model) return null;
-
+function buildHeaders(provider: AIProvider) {
   const headers: Record<string, string> = {
     Authorization: "Bearer " + provider.apiKey,
     "Content-Type": "application/json",
   };
 
   if (provider.name === "openrouter") {
-    headers["HTTP-Referer"] = process.env.APP_URL || "https://fullstack.mabrigkorie.org";
-    headers["X-OpenRouter-Title"] = "Full Stack Master Class";
+    headers["HTTP-Referer"] =
+      process.env.APP_URL || "https://fullstack.mabrigkorie.org";
+    headers["X-Title"] = "Full Stack Master Class";
   }
 
-  const response = await fetch(provider.baseUrl.replace(/\/$/, "") + "/chat/completions", {
+  return headers;
+}
+
+async function requestCompletion(
+  provider: AIProvider,
+  model: string,
+  messages: AIMessage[],
+  options: { temperature?: number; maxTokens?: number },
+) {
+  return fetch(provider.baseUrl.replace(/\/$/, "") + "/chat/completions", {
     method: "POST",
-    headers,
+    headers: buildHeaders(provider),
     body: JSON.stringify({
       model,
       temperature: options.temperature ?? 0.25,
@@ -178,9 +185,15 @@ export async function callAI(
     }),
     cache: "no-store",
   });
+}
 
+async function extractCompletion(provider: AIProvider, response: Response) {
   if (!response.ok) {
-    throw new AIRequestError(provider.name, response.status, safeErrorCode(response.status));
+    throw new AIRequestError(
+      provider.name,
+      response.status,
+      safeErrorCode(response.status),
+    );
   }
 
   const data = await response.json();
@@ -191,6 +204,34 @@ export async function callAI(
   }
 
   return content;
+}
+
+export async function callAI(
+  messages: AIMessage[],
+  options: { temperature?: number; maxTokens?: number } = {},
+): Promise<string | null> {
+  const provider = getProvider();
+  const model = process.env.AI_MODEL?.trim();
+
+  if (!provider || !model) return null;
+
+  const primary = await requestCompletion(provider, model, messages, options);
+
+  if (
+    provider.name === "openrouter" &&
+    primary.status === 402 &&
+    model !== fallbackModel()
+  ) {
+    const freeRetry = await requestCompletion(
+      provider,
+      fallbackModel(),
+      messages,
+      options,
+    );
+    return extractCompletion(provider, freeRetry);
+  }
+
+  return extractCompletion(provider, primary);
 }
 
 export function parseJsonObject<T = Record<string, unknown>>(value: string | null): T | null {
