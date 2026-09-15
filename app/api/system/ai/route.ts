@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
-import { getAIStatus } from "@/lib/ai";
+import { validateAIConfiguration } from "@/lib/ai";
 
 export async function GET() {
-  const status = getAIStatus();
-  return NextResponse.json(status, { status: status.configured ? 200 : 503 });
+  const status = await validateAIConfiguration();
+  const healthy =
+    status.configured &&
+    status.keyValid !== false &&
+    status.modelAvailable !== false;
+
+  return NextResponse.json(status, { status: healthy ? 200 : 503 });
 }
