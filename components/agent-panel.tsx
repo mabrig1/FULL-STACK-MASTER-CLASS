@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type Mode = "tutor" | "code-review" | "project-coach" | "quiz" | "career";
 
@@ -95,7 +97,9 @@ export default function AgentPanel({
         ))}
       </div>
 
-      <div className="agentReply">{reply}</div>
+      <div className="agentReply markdownReply">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{reply}</ReactMarkdown>
+      </div>
 
       {actions.length > 0 && (
         <div className="agentActions">
