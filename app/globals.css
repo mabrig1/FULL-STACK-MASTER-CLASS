@@ -336,3 +336,64 @@ button, textarea { font: inherit; }
   font-size: 12px;
 }
 .agentFallback { color: var(--danger); }
+
+.markdownReply { white-space: normal; }
+.markdownReply > :first-child { margin-top: 0; }
+.markdownReply > :last-child { margin-bottom: 0; }
+.markdownReply p { margin: 0 0 12px; }
+.markdownReply h1,
+.markdownReply h2,
+.markdownReply h3,
+.markdownReply h4 {
+  margin: 18px 0 9px;
+  letter-spacing: -.02em;
+}
+.markdownReply ul,
+.markdownReply ol {
+  margin: 10px 0 14px 22px;
+  padding: 0;
+}
+.markdownReply li { margin: 5px 0; }
+.markdownReply code {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255,255,255,.05);
+  padding: 2px 5px;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: .92em;
+}
+.markdownReply pre {
+  overflow-x: auto;
+  margin: 14px 0;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #04100c;
+}
+.markdownReply pre code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+.markdownReply blockquote {
+  margin: 14px 0;
+  padding-left: 14px;
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+}
+.markdownReply a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.markdownReply table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+}
+.markdownReply th,
+.markdownReply td {
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  text-align: left;
+}
