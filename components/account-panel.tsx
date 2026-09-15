@@ -17,6 +17,7 @@ type Me = {
 
 export default function AccountPanel() {
   const [data, setData] = useState<Me | null>(null);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     fetch("/api/me").then((response) => response.json()).then(setData).catch(() => setData(null));
@@ -25,6 +26,19 @@ export default function AccountPanel() {
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/";
+  }
+
+  async function requestCertificate() {
+    const response = await fetch("/api/certificates/issue", { method: "POST" });
+    const result = await response.json();
+    if (!response.ok) {
+      const criteria = result.criteria
+        ? " Modules: " + result.criteria.modules + ", verified projects: " + result.criteria.verifiedProjects + ", readiness: " + result.criteria.readiness + "/100."
+        : "";
+      setMessage((result.error || "Certificate could not be issued.") + criteria);
+      return;
+    }
+    setMessage("Certificate issued: " + result.certificateId + ". Verification URL: " + result.verifyUrl);
   }
 
   if (!data) return <div className="panel">Loading account…</div>;
@@ -57,8 +71,10 @@ export default function AccountPanel() {
       <div className="actionRow">
         <Link className="secondaryButton" href="/platform">Open platform</Link>
         <Link className="secondaryButton" href="/pricing">Upgrade</Link>
+        <button className="secondaryButton" onClick={requestCertificate}>Request certificate</button>
         <button className="secondaryButton" onClick={logout}>Sign out</button>
       </div>
+      {message && <div className="notice accountNotice">{message}</div>}
     </section>
   );
 }
