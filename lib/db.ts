@@ -14,6 +14,7 @@ export const collections = {
   cohorts: "cohorts",
   peerReviews: "peer_reviews",
   certificates: "certificates",
+  courseKnowledge: "course_knowledge",
 } as const;
 
 export function isDatabaseConfigured() {
@@ -60,6 +61,7 @@ function ensureIndexes(db: Db) {
         db.collection(collections.cohorts).createIndex({ code: 1 }, { unique: true }),
         db.collection(collections.peerReviews).createIndex({ reviewerId: 1, submissionId: 1 }, { unique: true }),
         db.collection(collections.certificates).createIndex({ certificateId: 1 }, { unique: true }),
+        db.collection(collections.courseKnowledge).createIndex({ moduleId: 1 }, { unique: true }),
       ]);
     })().catch((error) => {
       indexesPromise = null;
