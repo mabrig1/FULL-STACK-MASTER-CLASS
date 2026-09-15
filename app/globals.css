@@ -325,3 +325,14 @@ button, textarea { font: inherit; }
   .moduleRow { padding-left: 14px; padding-right: 14px; }
   .moduleRow small { display: none; }
 }
+
+.agentServiceNotice {
+  margin: 14px 0 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,155,143,.24);
+  border-radius: 12px;
+  background: rgba(255,155,143,.07);
+  color: #ffd7d1;
+  font-size: 12px;
+}
+.agentFallback { color: var(--danger); }
