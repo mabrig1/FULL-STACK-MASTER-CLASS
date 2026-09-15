@@ -9,12 +9,24 @@ const STORAGE_KEY = "fsmc-progress-v1";
 
 export default function CourseDashboard() {
   const [completed, setCompleted] = useState<number[]>([]);
+  const [syncMode, setSyncMode] = useState<"local" | "cloud">("local");
 
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
       if (stored) setCompleted(JSON.parse(stored));
     } catch {}
+
+    fetch("/api/progress")
+      .then(async (response) => ({ ok: response.ok, data: await response.json() }))
+      .then(({ ok, data }) => {
+        if (!ok) return;
+        const cloudCompleted = Array.isArray(data.completed) ? data.completed : [];
+        setCompleted(cloudCompleted);
+        setSyncMode("cloud");
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudCompleted));
+      })
+      .catch(() => undefined);
   }, []);
 
   const progress = Math.round((completed.length / courseModules.length) * 100);
@@ -38,11 +50,11 @@ export default function CourseDashboard() {
     <main className="dashboardPage">
       <section className="dashboardHero">
         <div>
-          <span className="eyebrow">ADAPTIVE DEVELOPER OS</span>
+          <span className="eyebrow">ADAPTIVE DEVELOPER OS · {syncMode === "cloud" ? "CLOUD SYNC" : "LOCAL MODE"}</span>
           <h1>Your path changes as your proof grows.</h1>
           <p>
-            The academy tracks completed modules locally, recommends the next build,
-            and gives your AI mentor the exact course context you are working in.
+            Signed-in learners sync progress to MongoDB. Everyone else can keep learning
+            locally and upgrade to a persistent account later.
           </p>
         </div>
         <div className="progressOrb" style={{ "--progress": progress } as React.CSSProperties}>
@@ -54,8 +66,15 @@ export default function CourseDashboard() {
       <section className="statGrid">
         <article><span>Skill score</span><strong>{skillScore}/100</strong><small>Based on completed evidence</small></article>
         <article><span>Build XP</span><strong>{xp.toLocaleString()}</strong><small>Earned by shipping modules</small></article>
-        <article><span>Momentum</span><strong>{streak} days</strong><small>Simulated learning streak</small></article>
+        <article><span>Momentum</span><strong>{streak} days</strong><small>Learning momentum indicator</small></article>
         <article><span>Portfolio proof</span><strong>{completed.length}</strong><small>Modules converted into evidence</small></article>
+      </section>
+
+      <section className="quickRail">
+        <Link href="/study-plan"><span>AI PLAN</span><strong>Personalized route →</strong></Link>
+        <Link href="/submissions"><span>VERIFY</span><strong>Project proof →</strong></Link>
+        <Link href="/orchestrator"><span>AGENTS</span><strong>Run a mission →</strong></Link>
+        <Link href="/career-readiness"><span>READINESS</span><strong>Measure evidence →</strong></Link>
       </section>
 
       <section className="dashboardGrid">
@@ -85,13 +104,14 @@ export default function CourseDashboard() {
             <span>02 · Build it</span>
             <span>03 · Break it</span>
             <span>04 · Fix it</span>
-            <span>05 · Ship it</span>
+            <span>05 · Verify it</span>
+            <span>06 · Ship it</span>
           </div>
         </div>
       </section>
 
       <AgentPanel
-        context={"Dashboard context. Completed " + completed.length + " of " + courseModules.length + " modules. Next recommended module: " + nextModule.title + "."}
+        context={"Dashboard context. Completed " + completed.length + " of " + courseModules.length + " modules. Next recommended module: " + nextModule.title + ". Sync mode: " + syncMode + "."}
       />
 
       <section className="curriculumSection">
@@ -100,7 +120,7 @@ export default function CourseDashboard() {
             <span className="eyebrow">64-MODULE MASTERY GRAPH</span>
             <h2>Curriculum that behaves like a product roadmap.</h2>
           </div>
-          <p>Each phase moves from knowledge to a demonstrable technical artifact.</p>
+          <p>Each phase moves from knowledge to demonstrable technical evidence.</p>
         </div>
 
         <div className="phaseList">
