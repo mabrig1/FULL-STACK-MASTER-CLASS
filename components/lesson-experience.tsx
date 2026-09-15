@@ -16,22 +16,45 @@ export default function LessonExperience({
 }) {
   const [done, setDone] = useState(false);
   const [code, setCode] = useState("// Build evidence here.\n");
+  const [syncMode, setSyncMode] = useState<"local" | "cloud">("local");
 
   useEffect(() => {
     try {
       const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "[]");
       setDone(stored.includes(module.id));
     } catch {}
+
+    fetch("/api/progress")
+      .then(async (response) => ({ ok: response.ok, data: await response.json() }))
+      .then(({ ok, data }) => {
+        if (!ok) return;
+        const completed = Array.isArray(data.completed) ? data.completed : [];
+        setDone(completed.includes(module.id));
+        setSyncMode("cloud");
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(completed));
+      })
+      .catch(() => undefined);
   }, [module.id]);
 
-  function toggleDone() {
+  async function toggleDone() {
+    const nextDone = !done;
+    setDone(nextDone);
+
     try {
       const stored: number[] = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "[]");
-      const next = done
-        ? stored.filter((id) => id !== module.id)
-        : Array.from(new Set([...stored, module.id]));
+      const next = nextDone
+        ? Array.from(new Set([...stored, module.id]))
+        : stored.filter((id) => id !== module.id);
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      setDone(!done);
+    } catch {}
+
+    try {
+      const response = await fetch("/api/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moduleId: module.id, completed: nextDone }),
+      });
+      if (response.ok) setSyncMode("cloud");
     } catch {}
   }
 
@@ -48,6 +71,8 @@ export default function LessonExperience({
         <Link href="/dashboard">Academy</Link>
         <span>/</span>
         <span>Module {module.id}</span>
+        <span>/</span>
+        <span>{syncMode === "cloud" ? "cloud-synced" : "local"}</span>
       </div>
 
       <section className="lessonHero">
@@ -55,8 +80,7 @@ export default function LessonExperience({
           <span className="eyebrow">{module.phase}</span>
           <h1>{module.title}</h1>
           <p>
-            This lesson is taught through a mastery loop: understand → build → test →
-            explain → ship.
+            This lesson follows a mastery loop: understand → build → test → explain → verify → ship.
           </p>
           <div className="lessonTags">
             <span>{module.level}</span>
@@ -86,9 +110,13 @@ export default function LessonExperience({
             <span className="eyebrow">BUILD CHALLENGE</span>
             <h3>{module.challenge}</h3>
             <p>
-              Your submission should include working behaviour, a short README, one
-              screenshot or demo link, and a paragraph explaining the hardest decision.
+              Submit working behaviour, a useful README, live proof when appropriate and
+              a short explanation of the hardest engineering decision.
             </p>
+            <div className="actionRow">
+              <Link className="secondaryButton" href="/sandbox">Open code sandbox</Link>
+              <Link className="secondaryButton" href="/submissions">Submit GitHub proof</Link>
+            </div>
           </div>
 
           <div className="codeLab">
@@ -101,8 +129,8 @@ export default function LessonExperience({
             </div>
             <textarea value={code} onChange={(event) => setCode(event.target.value)} rows={14} />
             <p className="hint">
-              Copy your experiment into the Code Review agent. The mentor is designed to
-              point out defects and trade-offs before giving a replacement solution.
+              The Code Review agent is grounded in this module and can remember your prior
+              signed-in learning interactions.
             </p>
           </div>
         </article>
@@ -116,17 +144,19 @@ export default function LessonExperience({
               ": " +
               module.title +
               ". Build challenge: " +
-              module.challenge
+              module.challenge +
+              ". Completion is " +
+              (done ? "marked complete" : "not complete") +
+              "."
             }
           />
           <div className="proofCard">
             <span className="eyebrow">PORTFOLIO PROOF</span>
             <h3>Do not finish with notes.</h3>
-            <p>
-              Finish with something another human can run, inspect, test or click.
-            </p>
+            <p>Finish with something another human can run, inspect, test or click.</p>
+            <Link href="/submissions">Verify a project →</Link>
             {module.id < total && (
-              <Link href={"/learn/" + (module.id + 1)}>Preview next module →</Link>
+              <><br /><Link href={"/learn/" + (module.id + 1)}>Preview next module →</Link></>
             )}
           </div>
         </aside>
