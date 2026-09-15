@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { callAI } from "@/lib/ai";
+import { callAI, getAIErrorCode } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { loadAgentMemories, saveAgentMemory } from "@/lib/memory";
 import { retrieveCourseContextHybrid } from "@/lib/rag";
