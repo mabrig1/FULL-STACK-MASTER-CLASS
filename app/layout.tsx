@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import "./commercial.css";
 
 export const metadata: Metadata = {
-  title: "Full Stack Master Class | AI-Powered Developer Academy",
+  title: "Full Stack Master Class | AI Developer Academy",
   description:
-    "Master full stack engineering, AI application development, agentic systems, SaaS, cloud and product building through adaptive project-based learning.",
+    "A commercial AI-native developer academy with project verification, agentic coaching, grading, cohorts and verifiable credentials.",
 };
 
 export default function RootLayout({
@@ -23,18 +24,19 @@ export default function RootLayout({
             </span>
           </Link>
           <nav>
-            <Link href="/#experience">Experience</Link>
-            <Link href="/#curriculum">Curriculum</Link>
-            <Link href="/dashboard">Launch Academy</Link>
+            <Link href="/dashboard">Academy</Link>
+            <Link href="/platform">Platform</Link>
+            <Link href="/sandbox">Sandbox</Link>
+            <Link href="/account">Account</Link>
           </nav>
         </header>
         {children}
         <footer className="footer">
           <div>
             <strong>FULL STACK MASTER CLASS</strong>
-            <p>Learn. Build. Deploy. Automate. Monetize.</p>
+            <p>Learn. Build. Verify. Deploy. Monetize.</p>
           </div>
-          <p>Built for builders who want proof, not just certificates.</p>
+          <p>Proof-first developer education powered by contextual AI.</p>
         </footer>
       </body>
     </html>
