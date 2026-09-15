@@ -1,4 +1,5 @@
 import { courseModules, phases } from "@/lib/course";
+import { collections, getDb, isDatabaseConfigured } from "@/lib/db";
 
 const phaseGuides: Record<string, string> = {
   "Phase 1 · Developer Foundations":
@@ -23,6 +24,16 @@ const phaseGuides: Record<string, string> = {
     "Product entrepreneurship turns technical capability into validated problems, scoped MVPs, client value, pricing, launch and measurable outcomes.",
 };
 
+export type CourseRetrieval = {
+  score?: number;
+  moduleId: number;
+  title: string;
+  phase: string;
+  challenge: string;
+  guidance: string;
+  source?: "vector" | "atlas-search" | "local";
+};
+
 function tokens(input: string) {
   return input
     .toLowerCase()
@@ -31,7 +42,7 @@ function tokens(input: string) {
     .filter((word) => word.length > 2);
 }
 
-export function retrieveCourseContext(query: string, limit = 5) {
+export function retrieveCourseContext(query: string, limit = 5): CourseRetrieval[] {
   const queryTokens = new Set(tokens(query));
 
   const ranked = courseModules
@@ -55,7 +66,84 @@ export function retrieveCourseContext(query: string, limit = 5) {
     phase: module.phase,
     challenge: module.challenge,
     guidance: phaseGuides[module.phase] || "",
+    source: "local",
   }));
+}
+
+function normalizeDbResults(rows: any[], source: "vector" | "atlas-search"): CourseRetrieval[] {
+  return rows.map((row) => ({
+    moduleId: Number(row.moduleId),
+    title: String(row.title || ""),
+    phase: String(row.phase || ""),
+    challenge: String(row.challenge || ""),
+    guidance: phaseGuides[String(row.phase || "")] || "",
+    source,
+  }));
+}
+
+export async function retrieveCourseContextHybrid(query: string, limit = 5): Promise<CourseRetrieval[]> {
+  if (!isDatabaseConfigured()) return retrieveCourseContext(query, limit);
+
+  try {
+    const db = await getDb();
+    const vectorRows = await db.collection(collections.courseKnowledge).aggregate([
+      {
+        $vectorSearch: {
+          index: "fsmc_course_vector",
+          path: "text",
+          query: { text: query },
+          model: "voyage-code-3",
+          numCandidates: Math.max(20, limit * 8),
+          limit,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          moduleId: 1,
+          title: 1,
+          phase: 1,
+          challenge: 1,
+        },
+      },
+    ]).toArray();
+
+    if (vectorRows.length) return normalizeDbResults(vectorRows, "vector");
+  } catch {
+    // The vector index may still be building or temporarily unavailable.
+  }
+
+  try {
+    const db = await getDb();
+    const lexicalRows = await db.collection(collections.courseKnowledge).aggregate([
+      {
+        $search: {
+          index: "fsmc_course_search",
+          text: {
+            query,
+            path: ["text", "title", "phase", "challenge"],
+            fuzzy: { maxEdits: 1 },
+          },
+        },
+      },
+      { $limit: limit },
+      {
+        $project: {
+          _id: 0,
+          moduleId: 1,
+          title: 1,
+          phase: 1,
+          challenge: 1,
+        },
+      },
+    ]).toArray();
+
+    if (lexicalRows.length) return normalizeDbResults(lexicalRows, "atlas-search");
+  } catch {
+    // Fall through to deterministic local retrieval.
+  }
+
+  return retrieveCourseContext(query, limit);
 }
 
 export function courseCatalogSummary() {
