@@ -4,9 +4,21 @@ import "./globals.css";
 import "./commercial.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://fullstack.mabrigkorie.org"),
   title: "Full Stack Master Class | AI Developer Academy",
   description:
     "A commercial AI-native developer academy with project verification, agentic coaching, grading, cohorts and verifiable credentials.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Full Stack Master Class | AI Developer Academy",
+    description:
+      "Learn full stack engineering, AI, agents, SaaS and production deployment through proof-first learning.",
+    url: "https://fullstack.mabrigkorie.org",
+    siteName: "Full Stack Master Class",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
