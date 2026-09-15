@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { validateAIConfiguration } from "@/lib/ai";
+import { validateAIConfiguration } from "@/lib/ai";\n\nexport const dynamic = "force-dynamic";
 
 export async function GET() {
   const status = await validateAIConfiguration();
