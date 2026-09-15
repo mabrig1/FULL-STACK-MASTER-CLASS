@@ -9,6 +9,20 @@ type AIProvider = {
   baseUrl: string;
 };
 
+export class AIRequestError extends Error {
+  status: number;
+  code: string;
+  provider: AIProvider["name"];
+
+  constructor(provider: AIProvider["name"], status: number, code: string) {
+    super(code);
+    this.name = "AIRequestError";
+    this.provider = provider;
+    this.status = status;
+    this.code = code;
+  }
+}
+
 function getProvider(): AIProvider | null {
   const openRouterKey = process.env.OPENROUTER_API_KEY?.trim();
   if (openRouterKey) {
@@ -45,6 +59,95 @@ export function getAIStatus() {
   };
 }
 
+function safeErrorCode(status: number) {
+  if (status === 400) return "invalid-request";
+  if (status === 401) return "invalid-api-key";
+  if (status === 402) return "insufficient-credits";
+  if (status === 403) return "provider-forbidden";
+  if (status === 404) return "model-unavailable";
+  if (status === 408) return "provider-timeout";
+  if (status === 429) return "rate-limited";
+  if (status >= 500) return "provider-unavailable";
+  return "provider-error";
+}
+
+export function getAIErrorCode(error: unknown) {
+  return error instanceof AIRequestError ? error.code : "provider-error";
+}
+
+export async function validateAIConfiguration() {
+  const status = getAIStatus();
+  const provider = getProvider();
+
+  if (!status.configured || !provider) {
+    return {
+      ...status,
+      keyValid: false,
+      modelAvailable: false,
+      budgetAvailable: null,
+      diagnostic: "not-configured",
+    };
+  }
+
+  if (provider.name !== "openrouter") {
+    return {
+      ...status,
+      keyValid: null,
+      modelAvailable: null,
+      budgetAvailable: null,
+      diagnostic: "configured",
+    };
+  }
+
+  try {
+    const keyResponse = await fetch(provider.baseUrl + "/key", {
+      headers: { Authorization: "Bearer " + provider.apiKey },
+      cache: "no-store",
+    });
+
+    if (!keyResponse.ok) {
+      return {
+        ...status,
+        keyValid: false,
+        modelAvailable: null,
+        budgetAvailable: null,
+        diagnostic: safeErrorCode(keyResponse.status),
+      };
+    }
+
+    const keyPayload = await keyResponse.json().catch(() => ({}));
+    const remaining = keyPayload?.data?.limit_remaining;
+    const budgetAvailable =
+      typeof remaining === "number" ? remaining > 0 : null;
+
+    const modelsResponse = await fetch(provider.baseUrl + "/models", {
+      headers: { Authorization: "Bearer " + provider.apiKey },
+      cache: "no-store",
+    });
+    const modelsPayload = await modelsResponse.json().catch(() => ({}));
+    const modelAvailable =
+      modelsResponse.ok &&
+      Array.isArray(modelsPayload?.data) &&
+      modelsPayload.data.some((item: any) => item?.id === status.model);
+
+    return {
+      ...status,
+      keyValid: true,
+      modelAvailable,
+      budgetAvailable,
+      diagnostic: modelAvailable ? "ready" : "model-unavailable",
+    };
+  } catch {
+    return {
+      ...status,
+      keyValid: null,
+      modelAvailable: null,
+      budgetAvailable: null,
+      diagnostic: "provider-unreachable",
+    };
+  }
+}
+
 export async function callAI(
   messages: AIMessage[],
   options: { temperature?: number; maxTokens?: number } = {},
@@ -61,7 +164,7 @@ export async function callAI(
 
   if (provider.name === "openrouter") {
     headers["HTTP-Referer"] = process.env.APP_URL || "https://fullstack.mabrigkorie.org";
-    headers["X-Title"] = "Full Stack Master Class";
+    headers["X-OpenRouter-Title"] = "Full Stack Master Class";
   }
 
   const response = await fetch(provider.baseUrl.replace(/\/$/, "") + "/chat/completions", {
@@ -77,13 +180,17 @@ export async function callAI(
   });
 
   if (!response.ok) {
-    const providerLabel =
-      provider.name === "openrouter" ? "OpenRouter" : "Vercel AI Gateway";
-    throw new Error(providerLabel + " request failed with " + response.status);
+    throw new AIRequestError(provider.name, response.status, safeErrorCode(response.status));
   }
 
   const data = await response.json();
-  return data?.choices?.[0]?.message?.content || null;
+  const content = data?.choices?.[0]?.message?.content;
+
+  if (!content || typeof content !== "string") {
+    throw new AIRequestError(provider.name, 502, "empty-model-response");
+  }
+
+  return content;
 }
 
 export function parseJsonObject<T = Record<string, unknown>>(value: string | null): T | null {
