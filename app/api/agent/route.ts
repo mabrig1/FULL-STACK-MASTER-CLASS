@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import { callAI } from "@/lib/ai";
+import { getCurrentUser } from "@/lib/auth";
+import { loadAgentMemories, saveAgentMemory } from "@/lib/memory";
+import { retrieveCourseContext } from "@/lib/rag";
 
 type AgentMode = "tutor" | "code-review" | "project-coach" | "quiz" | "career";
 
@@ -18,18 +22,18 @@ const personas: Record<AgentMode, string> = {
 function fallback(mode: AgentMode, message: string, context: string) {
   const base = {
     tutor:
-      "Start by separating what you know from what you are assuming. Reproduce the problem in the smallest example, inspect the data flowing into the failing step, and explain the expected result before changing code.",
+      "Separate what you know from what you are assuming. Reproduce the problem in the smallest example, inspect the data entering the failing step, then explain the expected result before changing code.",
     "code-review":
-      "Review this in four passes: correctness, security, maintainability and failure handling. First confirm inputs and outputs, then test edge cases, then remove duplicated responsibility, then make errors explicit.",
+      "Review this in four passes: correctness, security, maintainability and failure handling. Confirm inputs and outputs, test edge cases, remove duplicated responsibility and make errors explicit.",
     "project-coach":
-      "Reduce the idea to one vertical slice that a user can complete end-to-end. Define the user action, data required, success state and one failure state. Ship that before adding breadth.",
+      "Reduce the idea to one vertical slice a user can complete end-to-end. Define the user action, required data, success state and one failure state. Ship that before adding breadth.",
     quiz:
-      "Challenge: explain how you would prove that this feature works in production—not just locally. Your answer should cover expected behaviour, one edge case, one failure case and how you would observe the result.",
+      "Challenge: explain how you would prove this feature works in production, covering expected behaviour, one edge case, one failure case and how you would observe the result.",
     career:
-      "Turn this work into evidence: problem → engineering decision → implementation → measurable result → live proof. A strong portfolio entry shows your reasoning, not only screenshots.",
+      "Turn the work into evidence: problem → engineering decision → implementation → measurable result → live proof. A strong portfolio entry demonstrates reasoning, not screenshots alone.",
   }[mode];
 
-  return base + "\n\nCurrent context: " + context + "\n\nYour request: " + message.slice(0, 600);
+  return base + "\n\nCurrent context: " + context + "\n\nYour request: " + message.slice(0, 900);
 }
 
 function nextActions(mode: AgentMode) {
@@ -38,16 +42,14 @@ function nextActions(mode: AgentMode) {
     "code-review": ["Run the smallest failing case", "Fix highest-risk issue", "Add a regression test"],
     "project-coach": ["Define acceptance criteria", "Build vertical slice", "Deploy preview"],
     quiz: ["Answer without notes", "Justify the trade-off", "Ask for the next question"],
-    career: ["Capture a screenshot", "Write the case study", "Publish live proof"],
+    career: ["Capture live proof", "Write the case study", "Publish the repository"],
   };
   return map[mode];
 }
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
-  const mode: AgentMode = Object.keys(personas).includes(body.mode)
-    ? body.mode
-    : "tutor";
+  const mode: AgentMode = Object.keys(personas).includes(body.mode) ? body.mode : "tutor";
   const message = String(body.message || "").trim();
   const context = String(body.context || "General Full Stack Master Class context.");
 
@@ -55,60 +57,62 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Message is required." }, { status: 400 });
   }
 
-  const apiKey = process.env.AI_GATEWAY_API_KEY;
-  const model = process.env.AI_MODEL;
-  const baseUrl = process.env.AI_GATEWAY_BASE_URL || "https://ai-gateway.vercel.sh/v1";
+  const user = await getCurrentUser();
+  const retrieval = retrieveCourseContext(message + " " + context, 4);
+  const memories = user ? await loadAgentMemories(user.id, 5) : [];
 
-  if (!apiKey || !model) {
-    return NextResponse.json({
-      reply: fallback(mode, message, context),
-      nextActions: nextActions(mode),
-      source: "built-in-coach",
-    });
-  }
+  const grounding = retrieval
+    .map((item) => "Module " + item.moduleId + " — " + item.title + ": " + item.challenge + " " + item.guidance)
+    .join("\n");
+  const memoryContext = memories
+    .map((item) => item.summary || item.learnerMessage)
+    .filter(Boolean)
+    .join("\n");
 
+  let reply: string | null = null;
   try {
-    const response = await fetch(baseUrl.replace(/\/$/, "") + "/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.35,
-        messages: [
-          {
-            role: "system",
-            content:
-              personas[mode] +
-              "\nYou are part of the Full Stack Master Class mentor swarm. " +
-              "Keep advice project-based, production-aware, concise and safe. " +
-              "Never pretend code ran when it did not. Course context: " +
-              context,
-          },
-          { role: "user", content: message },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Gateway request failed with " + response.status);
-    }
-
-    const data = await response.json();
-    const reply = data?.choices?.[0]?.message?.content;
-
-    return NextResponse.json({
-      reply: reply || fallback(mode, message, context),
-      nextActions: nextActions(mode),
-      source: "live-ai",
-    });
+    reply = await callAI(
+      [
+        {
+          role: "system",
+          content:
+            personas[mode] +
+            "\nYou are part of the Full Stack Master Class mentor swarm. Ground answers in the retrieved course context. " +
+            "Use learner memory only when relevant. Never claim code ran unless evidence confirms it. Keep the learner building." +
+            "\n\nRetrieved course context:\n" +
+            grounding +
+            "\n\nRelevant learner memory:\n" +
+            (memoryContext || "No persistent memory yet.") +
+            "\n\nCurrent screen context:\n" +
+            context,
+        },
+        { role: "user", content: message },
+      ],
+      { temperature: mode === "quiz" ? 0.45 : 0.25 },
+    );
   } catch {
-    return NextResponse.json({
-      reply: fallback(mode, message, context),
-      nextActions: nextActions(mode),
-      source: "fallback-after-provider-error",
-    });
+    reply = null;
   }
+
+  const finalReply = reply || fallback(mode, message, context);
+
+  if (user) {
+    await saveAgentMemory({
+      userId: user.id,
+      scope: mode,
+      summary: mode + " interaction about " + message.slice(0, 180),
+      learnerMessage: message,
+      agentReply: finalReply,
+      tags: retrieval.map((item) => "module-" + item.moduleId),
+      importance: mode === "career" || mode === "code-review" ? 2 : 1,
+    }).catch(() => undefined);
+  }
+
+  return NextResponse.json({
+    reply: finalReply,
+    nextActions: nextActions(mode),
+    source: reply ? "live-ai-rag-memory" : "built-in-coach",
+    retrievedModules: retrieval.map((item) => item.moduleId),
+    memoryEnabled: Boolean(user),
+  });
 }
