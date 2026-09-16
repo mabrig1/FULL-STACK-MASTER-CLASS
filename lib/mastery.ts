@@ -192,7 +192,7 @@ export async function computeAdaptiveState(userId: string) {
   const now = new Date();
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [recentAssessments, recentMemories, duePractice] = await Promise.all([
+  const [recentAssessments, recentMemories, duePractice, weakConceptRows] = await Promise.all([
     db.collection(collections.assessmentAttempts)
       .find({ userId, createdAt: { $gte: sevenDaysAgo } })
       .sort({ createdAt: -1 })
@@ -206,6 +206,11 @@ export async function computeAdaptiveState(userId: string) {
       .find({ userId, status: "completed", nextReviewAt: { $lte: now } })
       .sort({ nextReviewAt: 1 })
       .limit(20)
+      .toArray(),
+    db.collection(collections.conceptMastery)
+      .find({ userId, mastery: { $lt: 70 } })
+      .sort({ mastery: 1, updatedAt: -1 })
+      .limit(12)
       .toArray(),
   ]);
 
@@ -284,6 +289,15 @@ export async function computeAdaptiveState(userId: string) {
       const module = getModule(moduleId);
       return { moduleId, title: module?.title || "Module " + moduleId };
     }),
+    weakConcepts: weakConceptRows.map((row) => ({
+      moduleId: Number(row.moduleId),
+      moduleTitle: getModule(Number(row.moduleId))?.title || "Module " + row.moduleId,
+      skillTag: String(row.skillTag || "concept"),
+      mastery: Number(row.mastery || 0),
+      attempts: Number(row.attempts || 0),
+      correct: Number(row.correct || 0),
+      nextReviewAt: row.nextReviewAt || null,
+    })),
     cognitiveLoad: {
       score: Math.round(loadScore),
       level: loadLevel,
