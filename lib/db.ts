@@ -23,6 +23,7 @@ export const collections = {
   notifications: "notifications",
   assessmentAttempts: "assessment_attempts",
   announcements: "announcements",
+  practiceSessions: "practice_sessions",
 } as const;
 
 function buildMongoUri() {
@@ -115,6 +116,8 @@ function ensureIndexes(db: Db) {
         db.collection(collections.notifications).createIndex({ userId: 1, createdAt: -1 }),
         db.collection(collections.assessmentAttempts).createIndex({ userId: 1, moduleId: 1, createdAt: -1 }),
         db.collection(collections.announcements).createIndex({ createdAt: -1 }),
+        db.collection(collections.practiceSessions).createIndex({ userId: 1, moduleId: 1, createdAt: -1 }),
+        db.collection(collections.practiceSessions).createIndex({ userId: 1, nextReviewAt: 1 }),
       ]);
     })().catch((error) => {
       indexesPromise = null;
