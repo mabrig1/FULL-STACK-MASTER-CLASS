@@ -7,10 +7,27 @@ import {
   normalizeEmail,
   roleForEmail,
 } from "@/lib/auth";
+import {
+  consumeRateLimit,
+  requestFingerprint,
+  writeAuditEvent,
+} from "@/lib/security";
 
 export async function POST(request: Request) {
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "Account storage is not configured yet." }, { status: 503 });
+  }
+
+  const throttle = await consumeRateLimit({
+    key: "register:" + requestFingerprint(request),
+    limit: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!throttle.allowed) {
+    return NextResponse.json(
+      { error: "Too many account-creation attempts. Try again later." },
+      { status: 429 },
+    );
   }
 
   const body = await request.json().catch(() => ({}));
@@ -18,9 +35,9 @@ export async function POST(request: Request) {
   const email = normalizeEmail(String(body.email || ""));
   const password = String(body.password || "");
 
-  if (name.length < 2 || !email.includes("@") || password.length < 8) {
+  if (name.length < 2 || !email.includes("@") || password.length < 10) {
     return NextResponse.json(
-      { error: "Use a valid name, email and a password of at least 8 characters." },
+      { error: "Use a valid name, email and a password of at least 10 characters." },
       { status: 400 },
     );
   }
@@ -44,14 +61,25 @@ export async function POST(request: Request) {
       targetRole: "Full Stack Developer",
       weeklyHours: 6,
       experienceLevel: "beginner",
+      goal: "",
     },
+    onboardingComplete: false,
     createdAt: now,
     updatedAt: now,
   });
 
   const session = await createSession(result.insertedId.toString());
+
+  await writeAuditEvent({
+    event: "auth.registered",
+    actorId: result.insertedId.toString(),
+    actorEmail: email,
+    request,
+    metadata: { role },
+  });
+
   const response = NextResponse.json({
-    user: { id: result.insertedId.toString(), name, email, role },
+    user: { id: result.insertedId.toString(), name, email, role, onboardingComplete: false },
   });
   response.cookies.set(SESSION_COOKIE, session.token, {
     httpOnly: true,
