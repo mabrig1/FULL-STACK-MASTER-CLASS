@@ -7,6 +7,7 @@ import { requestFingerprint } from "@/lib/security";
 import { consumeAIQuota } from "@/lib/usage";
 import { selectAgentSkill } from "@/lib/agent-skills";
 import { computeAdaptiveState } from "@/lib/mastery";
+import { recordAgentTrace } from "@/lib/agent-observability";
 
 type AgentMode = "tutor" | "code-review" | "project-coach" | "quiz" | "career";
 
@@ -52,6 +53,7 @@ function nextActions(mode: AgentMode) {
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   const body = await request.json().catch(() => ({}));
   const mode: AgentMode = Object.keys(personas).includes(body.mode) ? body.mode : "tutor";
   const message = String(body.message || "").trim();
@@ -166,6 +168,26 @@ export async function POST(request: Request) {
       importance: mode === "career" || mode === "code-review" ? 2 : 1,
     }).catch(() => undefined);
   }
+
+  await recordAgentTrace({
+    userId: user?.id || null,
+    kind: "mentor",
+    mode,
+    input: message,
+    output: finalReply,
+    status: reply ? "live" : "fallback",
+    latencyMs: Date.now() - startedAt,
+    provider: aiConfig.provider,
+    model: aiConfig.model,
+    skill: skill.id,
+    groundingStrength,
+    retrievedModules: retrieval.map((item) => item.moduleId),
+    metadata: {
+      aiErrorCode,
+      memoryEnabled: Boolean(user),
+      cognitiveLoad: adaptive?.cognitiveLoad?.level || null,
+    },
+  }).catch(() => undefined);
 
   return NextResponse.json({
     reply: finalReply,
