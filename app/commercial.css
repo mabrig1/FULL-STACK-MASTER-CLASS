@@ -557,3 +557,123 @@
   .courseStudioTop select { min-width: 0; width: 100%; }
   .lessonContentSections > section { grid-template-columns: 1fr; }
 }
+
+.assessmentList {
+  display: grid;
+  gap: 16px;
+  margin-top: 34px;
+}
+.assessmentQuestion h2 {
+  font-size: clamp(22px, 3vw, 34px);
+  margin: 10px 0 18px;
+}
+.assessmentOptions {
+  display: grid;
+  gap: 10px;
+}
+.assessmentOptions label {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  cursor: pointer;
+  background: rgba(255,255,255,.015);
+}
+.assessmentOptions label:hover {
+  border-color: rgba(123,247,181,.3);
+}
+.assessmentOptions input {
+  margin-top: 3px;
+}
+.assessmentResult {
+  margin: 38px 0 16px;
+  padding: 34px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+}
+.assessmentResult strong {
+  display: block;
+  font-size: clamp(76px, 12vw, 150px);
+  line-height: .8;
+  letter-spacing: -.07em;
+}
+.assessmentResult span {
+  display: inline-block;
+  margin-top: 18px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  font-size: 11px;
+}
+.assessmentResult.passed strong,
+.assessmentResult.passed span {
+  color: var(--accent);
+}
+.assessmentResult.failed strong,
+.assessmentResult.failed span {
+  color: var(--accent-2);
+}
+.reviewAnswers {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 24px;
+}
+.reviewAnswers article {
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+}
+.reviewAnswers p {
+  margin: 7px 0;
+  color: #d5e2de;
+}
+.reviewAnswers small {
+  display: block;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.gradeSummary {
+  margin-top: 34px;
+}
+.tableRow small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.notificationList {
+  display: grid;
+  gap: 10px;
+}
+.notificationList article {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+}
+.notificationList article.unread {
+  border-color: rgba(123,247,181,.28);
+  background: rgba(123,247,181,.04);
+}
+.notificationList h3 {
+  margin: 7px 0;
+}
+.notificationList p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+.notificationList small {
+  color: #68847a;
+}
+.accountFactsFour {
+  grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 900px) {
+  .accountFactsFour { grid-template-columns: 1fr 1fr; }
+  .notificationList article { flex-direction: column; }
+}
+@media (max-width: 620px) {
+  .accountFactsFour { grid-template-columns: 1fr; }
+}
