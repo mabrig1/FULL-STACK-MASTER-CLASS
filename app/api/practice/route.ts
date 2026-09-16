@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import { callAI, parseJsonObject } from "@/lib/ai";
+import { callAI, getAIStatus, parseJsonObject } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { getModule } from "@/lib/course";
 import { getCourseContent } from "@/lib/content";
@@ -8,6 +8,7 @@ import { collections, getDb } from "@/lib/db";
 import { computeMasteryGraph } from "@/lib/mastery";
 import { createNotification } from "@/lib/notifications";
 import { consumeAIQuota } from "@/lib/usage";
+import { recordAgentTrace } from "@/lib/agent-observability";
 
 type GeneratedQuestion = {
   question: string;
@@ -78,6 +79,7 @@ function fallbackQuestions(content: Awaited<ReturnType<typeof getCourseContent>>
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
 
@@ -135,6 +137,65 @@ export async function POST(request: Request) {
       },
     );
 
+    for (const item of review) {
+      const skillTag =
+        item.skillTag.trim() ||
+        "module-" + session.moduleId + "-concept-" + String(item.index + 1);
+      const existing = await db.collection(collections.conceptMastery).findOne({
+        userId: user.id,
+        moduleId: Number(session.moduleId),
+        skillTag,
+      });
+      const previous = Number(existing?.mastery || 0);
+      const attemptScore = item.correct ? 100 : 0;
+      const mastery = existing
+        ? Math.round(previous * 0.7 + attemptScore * 0.3)
+        : attemptScore;
+
+      await db.collection(collections.conceptMastery).updateOne(
+        {
+          userId: user.id,
+          moduleId: Number(session.moduleId),
+          skillTag,
+        },
+        {
+          $set: {
+            mastery,
+            lastCorrect: item.correct,
+            lastPracticedAt: new Date(),
+            nextReviewAt,
+            updatedAt: new Date(),
+          },
+          $inc: {
+            attempts: 1,
+            correct: item.correct ? 1 : 0,
+          },
+          $setOnInsert: {
+            createdAt: new Date(),
+          },
+        },
+        { upsert: true },
+      );
+    }
+
+    await recordAgentTrace({
+      userId: user.id,
+      kind: "practice",
+      mode: "submit",
+      input: "Module " + session.moduleId + " adaptive practice submission",
+      output: "Score " + score + "%; " + correct + "/" + questions.length + " correct.",
+      status: "completed",
+      latencyMs: Date.now() - startedAt,
+      retrievedModules: [Number(session.moduleId)],
+      metadata: {
+        score,
+        correct,
+        total: questions.length,
+        intervalDays,
+        weakConcepts: review.filter((item) => !item.correct).map((item) => item.skillTag),
+      },
+    }).catch(() => undefined);
+
     if (score >= 85) {
       await createNotification({
         userId: user.id,
@@ -152,6 +213,9 @@ export async function POST(request: Request) {
       review,
       nextReviewAt,
       intervalDays,
+      weakConcepts: review
+        .filter((item) => !item.correct)
+        .map((item) => item.skillTag || "module-" + session.moduleId + "-concept-" + String(item.index + 1)),
     });
   }
 
@@ -181,6 +245,7 @@ export async function POST(request: Request) {
     target.score < 40 ? "foundation" : target.score < 70 ? "applied" : "challenge";
 
   let questions: GeneratedQuestion[] = [];
+  let liveGenerated = false;
   try {
     const raw = await callAI([
       {
@@ -205,6 +270,7 @@ export async function POST(request: Request) {
     ], { temperature: 0.35, maxTokens: 1800 });
     const parsed = parseJsonObject<{ questions?: GeneratedQuestion[] }>(raw);
     questions = sanitizeQuestions(parsed?.questions);
+    liveGenerated = questions.length >= 2;
   } catch {
     questions = [];
   }
@@ -221,6 +287,24 @@ export async function POST(request: Request) {
     status: "active",
     createdAt: new Date(),
   });
+
+  const aiStatus = getAIStatus();
+  await recordAgentTrace({
+    userId: user.id,
+    kind: "practice",
+    mode: difficulty,
+    input: "Generate adaptive practice for Module " + target.moduleId + ": " + target.title,
+    output: "Generated " + questions.length + " questions at " + difficulty + " difficulty.",
+    status: liveGenerated ? "live" : "fallback",
+    latencyMs: Date.now() - startedAt,
+    provider: aiStatus.provider,
+    model: aiStatus.model,
+    retrievedModules: [target.moduleId],
+    metadata: {
+      masteryBefore: target.score,
+      questionCount: questions.length,
+    },
+  }).catch(() => undefined);
 
   return NextResponse.json({
     sessionId: result.insertedId.toString(),
