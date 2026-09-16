@@ -447,3 +447,113 @@
   .adminSearch { flex-direction: column; }
   .learnerRow { grid-template-columns: 1fr; }
 }
+
+.courseStudioTop {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.courseStudioTop select {
+  min-width: min(680px, 80vw);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #071410;
+  color: var(--text);
+  padding: 13px 15px;
+}
+.courseJsonEditor {
+  min-height: 760px;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  line-height: 1.5;
+  tab-size: 2;
+}
+.lessonSummary {
+  color: var(--muted);
+  line-height: 1.75;
+  font-size: 16px;
+  margin-bottom: 28px;
+}
+.lessonContentSections {
+  display: grid;
+  gap: 10px;
+  margin: 32px 0;
+}
+.lessonContentSections > section {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 15px;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+}
+.lessonContentSections > section > span {
+  color: var(--accent);
+  font-family: monospace;
+}
+.lessonContentSections h3 {
+  margin: 0 0 8px;
+  font-size: 23px;
+}
+.lessonContentSections p {
+  margin: 0;
+  color: #d2dfda;
+  line-height: 1.75;
+}
+.lessonLab,
+.lessonQuiz,
+.reflectionBox {
+  margin: 34px 0;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255,255,255,.018);
+}
+.lessonLab h3,
+.lessonQuiz h3 {
+  margin: 9px 0 15px;
+  font-size: 27px;
+}
+.lessonLab ol {
+  padding-left: 22px;
+  color: #d5e3de;
+  line-height: 1.7;
+}
+.lessonLab li { margin: 9px 0; }
+.labDeliverable {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 13px;
+  background: rgba(123,247,181,.06);
+  border: 1px solid rgba(123,247,181,.15);
+}
+.labDeliverable p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.lessonQuiz details {
+  border-top: 1px solid var(--line);
+  padding: 15px 0;
+}
+.lessonQuiz summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.lessonQuiz ul {
+  color: var(--muted);
+  line-height: 1.6;
+}
+.lessonQuiz details > p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+.reflectionBox p {
+  margin: 10px 0 0;
+  color: #d8e8e1;
+  line-height: 1.75;
+}
+@media (max-width: 700px) {
+  .courseStudioTop { align-items: stretch; flex-direction: column; }
+  .courseStudioTop select { min-width: 0; width: 100%; }
+  .lessonContentSections > section { grid-template-columns: 1fr; }
+}
