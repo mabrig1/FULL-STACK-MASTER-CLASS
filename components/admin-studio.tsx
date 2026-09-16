@@ -47,6 +47,7 @@ export default function AdminStudio() {
       <section className="adminCommandBar">
         <Link href="/admin/benchmark">Benchmark Lab →</Link>
         <Link href="/admin/quality">Agent Quality Lab →</Link>
+        <Link href="/admin/model-bench">Model Bench →</Link>
         <Link href="/admin/interventions">Intervention Radar →</Link>
         <Link href="/admin/course">Course Studio →</Link>
         <Link href="/admin/gradebook">Assessment analytics →</Link>
