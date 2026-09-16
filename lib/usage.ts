@@ -1,7 +1,7 @@
 import { collections, getDb, isDatabaseConfigured } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth";
 
-type Feature = "mentor" | "orchestrator" | "study-plan" | "grading";
+type Feature = "mentor" | "orchestrator" | "study-plan" | "grading" | "practice";
 
 function dayKey(date = new Date()) {
   return date.toISOString().slice(0, 10);
@@ -14,11 +14,13 @@ export function aiLimitFor(user: SessionUser | null, feature: Feature) {
   if (user?.plan === "masterclass") {
     if (feature === "orchestrator") return 20;
     if (feature === "grading") return 40;
+    if (feature === "practice") return 60;
     return 150;
   }
 
   if (feature === "orchestrator") return 1;
   if (feature === "grading") return 2;
+  if (feature === "practice") return user ? 8 : 2;
   return user ? 10 : 3;
 }
 
