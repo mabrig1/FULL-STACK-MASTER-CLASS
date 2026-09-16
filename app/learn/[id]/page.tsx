@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import LessonExperience from "@/components/lesson-experience";
 import { courseModules, getModule } from "@/lib/course";
 import { getCurrentUser } from "@/lib/auth";
+import { getCourseContent } from "@/lib/content";
 
 export default async function LessonPage({
   params,
@@ -45,5 +46,6 @@ export default async function LessonPage({
     );
   }
 
-  return <LessonExperience module={module} total={courseModules.length} />;
+  const content = await getCourseContent(module.id);
+  return <LessonExperience module={module} total={courseModules.length} content={content} />;
 }
