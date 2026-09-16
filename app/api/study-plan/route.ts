@@ -3,6 +3,7 @@ import { callAI, parseJsonObject } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { collections, getDb } from "@/lib/db";
 import { courseModules } from "@/lib/course";
+import { consumeAIQuota } from "@/lib/usage";
 
 type StudyPlan = {
   summary: string;
@@ -50,6 +51,15 @@ export async function GET() {
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  const quota = await consumeAIQuota({
+    subject: "user:" + user.id,
+    user,
+    feature: "study-plan",
+  });
+  if (!quota.allowed) {
+    return NextResponse.json({ error: "Daily AI study-plan allowance reached.", quota }, { status: 429 });
+  }
+
   const body = await request.json().catch(() => ({}));
   const goal = String(body.goal || "Become a job-ready full stack developer").slice(0, 500);
   const targetRole = String(body.targetRole || "Full Stack Developer").slice(0, 120);
@@ -102,5 +112,5 @@ export async function POST(request: Request) {
     createdAt: new Date(),
   };
   await db.collection(collections.studyPlans).insertOne(stored);
-  return NextResponse.json({ plan: stored });
+  return NextResponse.json({ plan: stored, quota });
 }
