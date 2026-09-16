@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ObjectId } from "mongodb";
 import { canManageAcademy, getCurrentUser } from "@/lib/auth";
 import { collections, getDb } from "@/lib/db";
 import { createNotification } from "@/lib/notifications";
@@ -194,7 +195,10 @@ export async function POST(request: Request) {
   }
 
   const db = await getDb();
-  const learner = await db.collection(collections.users).findOne({ _id: new (await import("mongodb")).ObjectId(userId) }).catch(() => null);
+  if (!ObjectId.isValid(userId)) {
+    return NextResponse.json({ error: "Invalid learner." }, { status: 400 });
+  }
+  const learner = await db.collection(collections.users).findOne({ _id: new ObjectId(userId) });
   if (!learner) return NextResponse.json({ error: "Learner not found." }, { status: 404 });
 
   await createNotification({
