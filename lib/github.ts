@@ -130,3 +130,84 @@ export async function fetchRepoEvidence(githubUrl: string): Promise<RepoEvidence
     lastCommitAt: Array.isArray(commits) ? commits[0]?.commit?.committer?.date || null : null,
   };
 }
+
+
+export type RepoContextFile = {
+  path: string;
+  size: number;
+  content: string;
+};
+
+export type ReviewEffort = "lite" | "balanced" | "deep";
+
+function encodedRepoPath(path: string) {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+function filePriority(path: string) {
+  const lower = path.toLowerCase();
+  let score = 0;
+  if (/^(app|src|pages|lib|server|api|components)//.test(lower)) score += 8;
+  if (/(route|api|auth|security|middleware|db|database|schema|test|spec|config)/.test(lower)) score += 7;
+  if (/.(ts|tsx|js|jsx|py|go|java|cs)$/.test(lower)) score += 5;
+  if (/package.json$|next.config|vercel.json|dockerfile|readme/i.test(lower)) score += 4;
+  if (/.test.|.spec.|__tests__/.test(lower)) score += 6;
+  if (/lock$|.map$|dist/|build/|coverage/|public/|assets/|vendor//.test(lower)) score -= 20;
+  return score;
+}
+
+export async function fetchRepoContext(
+  githubUrl: string,
+  effort: ReviewEffort = "balanced",
+): Promise<{ files: RepoContextFile[]; truncated: boolean; effort: ReviewEffort }> {
+  const parsed = parseGitHubUrl(githubUrl);
+  if (!parsed) throw new Error("Use a valid github.com repository URL.");
+
+  const { owner, repo } = parsed;
+  const meta = (await api("/repos/" + owner + "/" + repo)) as GitHubRepo;
+  const tree = await optionalApi(
+    "/repos/" +
+      owner +
+      "/" +
+      repo +
+      "/git/trees/" +
+      encodeURIComponent(meta.default_branch) +
+      "?recursive=1",
+  );
+
+  const entries = Array.isArray(tree?.tree) ? tree.tree : [];
+  const maxFiles = effort === "lite" ? 4 : effort === "deep" ? 14 : 8;
+  const maxCharsPerFile = effort === "lite" ? 3000 : effort === "deep" ? 7000 : 5000;
+
+  const candidates = entries
+    .filter((item: any) => item?.type === "blob" && Number(item?.size || 0) <= 120000)
+    .filter((item: any) => /.(ts|tsx|js|jsx|json|md|py|go|java|cs|yml|yaml)$/i.test(String(item.path || "")))
+    .map((item: any) => ({
+      path: String(item.path),
+      size: Number(item.size || 0),
+      priority: filePriority(String(item.path || "")),
+    }))
+    .filter((item: any) => item.priority > -10)
+    .sort((a: any, b: any) => b.priority - a.priority || a.size - b.size)
+    .slice(0, maxFiles);
+
+  const files: RepoContextFile[] = [];
+  for (const item of candidates) {
+    const payload = await optionalApi(
+      "/repos/" + owner + "/" + repo + "/contents/" + encodedRepoPath(item.path),
+    );
+    const content = decodeContent(payload);
+    if (!content) continue;
+    files.push({
+      path: item.path,
+      size: item.size,
+      content: content.slice(0, maxCharsPerFile),
+    });
+  }
+
+  return {
+    files,
+    truncated: entries.length > candidates.length,
+    effort,
+  };
+}
