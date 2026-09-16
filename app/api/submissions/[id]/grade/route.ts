@@ -5,6 +5,7 @@ import { getCurrentUser, canManageAcademy } from "@/lib/auth";
 import { collections, getDb } from "@/lib/db";
 import { getModule } from "@/lib/course";
 import { fetchRepoEvidence } from "@/lib/github";
+import { consumeAIQuota } from "@/lib/usage";
 
 type AIGrade = {
   adjustment?: number;
@@ -15,11 +16,20 @@ type AIGrade = {
 };
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  const quota = await consumeAIQuota({
+    subject: "user:" + user.id,
+    user,
+    feature: "grading",
+  });
+  if (!quota.allowed) {
+    return NextResponse.json({ error: "Daily automated-grading allowance reached.", quota }, { status: 429 });
+  }
+
   const { id } = await params;
   if (!ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid submission." }, { status: 400 });
 
@@ -110,5 +120,5 @@ export async function POST(
     { $set: { grade, status: "graded", updatedAt: new Date() } },
   );
 
-  return NextResponse.json({ grade });
+  return NextResponse.json({ grade, quota });
 }
