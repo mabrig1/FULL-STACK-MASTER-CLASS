@@ -21,7 +21,8 @@ export async function GET(
     return new NextResponse("Credential not found", { status: 404 });
   }
 
-  const base = (process.env.APP_URL || "https://fullstack.mabrigkorie.org").replace(//$/, "");
+  const rawBase = process.env.APP_URL || "https://fullstack.mabrigkorie.org";
+  const base = rawBase.endsWith("/") ? rawBase.slice(0, -1) : rawBase;
   const verifyUrl = base + "/verify/" + encodeURIComponent(id);
 
   const svg = await QRCode.toString(verifyUrl, {
