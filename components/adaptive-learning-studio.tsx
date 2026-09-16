@@ -47,6 +47,7 @@ export default function AdaptiveLearningStudio() {
     questions: PracticeQuestion[];
   }>(null);
   const [result, setResult] = useState<any>(null);
+  const [remediation, setRemediation] = useState<any>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -74,6 +75,20 @@ export default function AdaptiveLearningStudio() {
     setSession(data);
   }
 
+  async function remediate(moduleId: number) {
+    setBusy(true);
+    setMessage("");
+    const response = await fetch("/api/remediation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ moduleId }),
+    });
+    const data = await response.json();
+    setBusy(false);
+    if (!response.ok) return setMessage(data.error || "Unable to build remediation plan.");
+    setRemediation(data);
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!session) return;
@@ -88,7 +103,7 @@ export default function AdaptiveLearningStudio() {
     const data = await response.json();
     setBusy(false);
     if (!response.ok) return setMessage(data.error || "Practice grading failed.");
-    setResult(data);
+    setResult({ ...data, moduleId: session.moduleId });
     setSession(null);
     await load();
   }
@@ -119,6 +134,11 @@ export default function AdaptiveLearningStudio() {
                   <button className="primaryButton" disabled={busy} onClick={() => generate(state.recommendation!.moduleId)}>
                     {busy ? "Generating…" : "Start adaptive workout"}
                   </button>
+                  {(state.recommendation.type === "recover" || state.recommendation.type === "practice") && (
+                    <button className="secondaryButton" disabled={busy} onClick={() => remediate(state.recommendation!.moduleId)}>
+                      Build remediation plan
+                    </button>
+                  )}
                 </div>
               )}
             </article>
@@ -191,6 +211,42 @@ export default function AdaptiveLearningStudio() {
           <strong>{result.score}%</strong>
           <span>{result.score >= 70 ? "REINFORCED" : "REVIEW SOON"}</span>
           <p>Next spaced review in {result.intervalDays} day{result.intervalDays === 1 ? "" : "s"}.</p>
+          {result.score < 70 && (
+            <button className="secondaryButton" disabled={busy} onClick={() => remediate(Number(result.moduleId))}>
+              Generate targeted remediation
+            </button>
+          )}
+        </section>
+      )}
+
+      {remediation && (
+        <section className="commercialSection remediationPlan">
+          <span className="eyebrow">AUTONOMOUS REMEDIATION · MODULE {remediation.moduleId}</span>
+          <h2>{remediation.moduleTitle}</h2>
+          <div className="remediationGrid">
+            <article>
+              <span>DIAGNOSIS</span>
+              <p>{remediation.plan.diagnosis}</p>
+            </article>
+            <article>
+              <span>MICRO-LESSON</span>
+              <p>{remediation.plan.microLesson}</p>
+            </article>
+            <article>
+              <span>WORKED EXAMPLE</span>
+              <p>{remediation.plan.workedExample}</p>
+            </article>
+            <article>
+              <span>EXIT TICKET</span>
+              <p>{remediation.plan.exitTicket.question}</p>
+              <small>{remediation.plan.exitTicket.successCriteria}</small>
+            </article>
+          </div>
+          <div className="remediationActions">
+            {remediation.plan.actions.map((action: string, index: number) => (
+              <span key={index}>{index + 1}. {action}</span>
+            ))}
+          </div>
         </section>
       )}
     </main>
