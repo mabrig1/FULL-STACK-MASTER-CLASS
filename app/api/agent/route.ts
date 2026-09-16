@@ -5,6 +5,8 @@ import { loadAgentMemories, saveAgentMemory } from "@/lib/memory";
 import { retrieveCourseContextHybrid } from "@/lib/rag";
 import { requestFingerprint } from "@/lib/security";
 import { consumeAIQuota } from "@/lib/usage";
+import { selectAgentSkill } from "@/lib/agent-skills";
+import { computeAdaptiveState } from "@/lib/mastery";
 
 type AgentMode = "tutor" | "code-review" | "project-coach" | "quiz" | "career";
 
@@ -61,6 +63,7 @@ export async function POST(request: Request) {
 
   const aiConfig = getAIStatus();
   const user = await getCurrentUser();
+  const skill = selectAgentSkill(mode, message);
   const quota = await consumeAIQuota({
     subject: user ? "user:" + user.id : "anon:" + requestFingerprint(request),
     user,
@@ -85,6 +88,9 @@ export async function POST(request: Request) {
   }
   const retrieval = await retrieveCourseContextHybrid(message + " " + context, 4);
   const memories = user ? await loadAgentMemories(user.id, 5) : [];
+  const adaptive = user
+    ? await computeAdaptiveState(user.id).catch(() => null)
+    : null;
 
   const grounding = retrieval
     .map((item) => "Module " + item.moduleId + " — " + item.title + ": " + item.challenge + " " + item.guidance)
@@ -93,6 +99,20 @@ export async function POST(request: Request) {
     .map((item) => item.summary || item.learnerMessage)
     .filter(Boolean)
     .join("\n");
+  const groundingStrength =
+    retrieval.length >= 2 && retrieval.some((item) => item.source === "vector" || item.source === "atlas-search")
+      ? "strong"
+      : retrieval.length
+        ? "moderate"
+        : "limited";
+  const adaptiveContext = adaptive
+    ? "Mastery recommendation: " +
+      (adaptive.recommendation
+        ? adaptive.recommendation.type + " Module " + adaptive.recommendation.moduleId + " " + adaptive.recommendation.title
+        : "none") +
+      ". Cognitive load: " + adaptive.cognitiveLoad.level + " (" + adaptive.cognitiveLoad.score + "/100). " +
+      adaptive.cognitiveLoad.intervention
+    : "No persistent adaptive state is available.";
 
   let reply: string | null = null;
   let aiErrorCode: string | null = null;
@@ -104,6 +124,7 @@ export async function POST(request: Request) {
           role: "system",
           content:
             personas[mode] +
+            "\nActive agent skill: " + skill.label + ". " + skill.instructions +
             "\nYou are part of the Full Stack Master Class mentor swarm. Ground answers in the retrieved course context. " +
             "Use learner memory only when relevant. Never claim code ran unless evidence confirms it. " +
             "For production examples: never trust unsigned client cookies for authorization, validate input, reuse the shared database helper instead of opening a new MongoClient per request, keep secrets server-only, and distinguish demo shortcuts from production patterns. " +
@@ -112,6 +133,8 @@ export async function POST(request: Request) {
             grounding +
             "\n\nRelevant learner memory:\n" +
             (memoryContext || "No persistent memory yet.") +
+            "\n\nAdaptive learner state:\n" +
+            adaptiveContext +
             "\n\nCurrent screen context:\n" +
             context,
         },
@@ -139,7 +162,7 @@ export async function POST(request: Request) {
       summary: mode + " interaction about " + message.slice(0, 180),
       learnerMessage: message,
       agentReply: finalReply,
-      tags: retrieval.map((item) => "module-" + item.moduleId),
+      tags: [skill.id, ...retrieval.map((item) => "module-" + item.moduleId)],
       importance: mode === "career" || mode === "code-review" ? 2 : 1,
     }).catch(() => undefined);
   }
@@ -156,5 +179,15 @@ export async function POST(request: Request) {
     aiModel: aiConfig.model,
     aiConfiguredInAgentRuntime: aiConfig.configured,
     quota,
+    skill: { id: skill.id, label: skill.label },
+    groundingStrength,
+    grounding: retrieval.map((item) => ({
+      moduleId: item.moduleId,
+      title: item.title,
+      source: item.source || "local",
+      score: item.score ?? null,
+    })),
+    adaptiveRecommendation: adaptive?.recommendation || null,
+    cognitiveLoad: adaptive?.cognitiveLoad || null,
   });
 }
