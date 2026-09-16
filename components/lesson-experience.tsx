@@ -4,15 +4,18 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import AgentPanel from "@/components/agent-panel";
 import { CourseModule } from "@/lib/course";
+import type { CourseContent } from "@/lib/content";
 
 const STORAGE_KEY = "fsmc-progress-v1";
 
 export default function LessonExperience({
   module,
   total,
+  content,
 }: {
   module: CourseModule;
   total: number;
+  content: CourseContent;
 }) {
   const [done, setDone] = useState(false);
   const [code, setCode] = useState("// Build evidence here.\n");
@@ -58,12 +61,7 @@ export default function LessonExperience({
     } catch {}
   }
 
-  const outcomes = [
-    "Explain the core engineering idea in your own words.",
-    "Implement the idea inside a working feature.",
-    "Identify at least one failure mode and debug it.",
-    "Document the decision so another developer can reproduce it.",
-  ];
+  const outcomes = content.objectives;
 
   return (
     <main className="lessonPage">
@@ -97,6 +95,7 @@ export default function LessonExperience({
         <article className="lessonArticle">
           <span className="eyebrow">THE MASTERY BRIEF</span>
           <h2>What you must be able to prove</h2>
+          <p className="lessonSummary">{content.summary}</p>
           <div className="outcomeList">
             {outcomes.map((item, index) => (
               <div key={item}>
@@ -104,6 +103,52 @@ export default function LessonExperience({
                 <p>{item}</p>
               </div>
             ))}
+          </div>
+
+          <div className="lessonContentSections">
+            {content.sections.map((section, index) => (
+              <section key={section.title}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <div>
+                  <h3>{section.title}</h3>
+                  <p>{section.body}</p>
+                </div>
+              </section>
+            ))}
+          </div>
+
+          <div className="lessonLab">
+            <span className="eyebrow">GUIDED LAB</span>
+            <h3>{content.lab.title}</h3>
+            <ol>
+              {content.lab.steps.map((step) => <li key={step}>{step}</li>)}
+            </ol>
+            <div className="labDeliverable">
+              <strong>Deliverable</strong>
+              <p>{content.lab.deliverable}</p>
+            </div>
+          </div>
+
+          {content.quiz.length > 0 && (
+            <div className="lessonQuiz">
+              <span className="eyebrow">KNOWLEDGE CHECK</span>
+              <h3>Test your reasoning before you mark the module complete.</h3>
+              {content.quiz.map((item, index) => (
+                <details key={item.question}>
+                  <summary>{index + 1}. {item.question}</summary>
+                  <ul>
+                    {item.options.map((option) => <li key={option}>{option}</li>)}
+                  </ul>
+                  <p><strong>Answer:</strong> {item.answer}</p>
+                  <p>{item.explanation}</p>
+                </details>
+              ))}
+            </div>
+          )}
+
+          <div className="reflectionBox">
+            <span className="eyebrow">REFLECTION</span>
+            <p>{content.reflection}</p>
           </div>
 
           <div className="challengeBox">
@@ -143,6 +188,8 @@ export default function LessonExperience({
               module.id +
               ": " +
               module.title +
+              ". Lesson summary: " +
+              content.summary +
               ". Build challenge: " +
               module.challenge +
               ". Completion is " +
