@@ -131,18 +131,15 @@ export default function LessonExperience({
 
           {content.quiz.length > 0 && (
             <div className="lessonQuiz">
-              <span className="eyebrow">KNOWLEDGE CHECK</span>
-              <h3>Test your reasoning before you mark the module complete.</h3>
-              {content.quiz.map((item, index) => (
-                <details key={item.question}>
-                  <summary>{index + 1}. {item.question}</summary>
-                  <ul>
-                    {item.options.map((option) => <li key={option}>{option}</li>)}
-                  </ul>
-                  <p><strong>Answer:</strong> {item.answer}</p>
-                  <p>{item.explanation}</p>
-                </details>
-              ))}
+              <span className="eyebrow">GRADED KNOWLEDGE CHECK</span>
+              <h3>{content.quiz.length} questions · 70% required to pass.</h3>
+              <p>
+                Answers are graded on the server and recorded in your learner gradebook.
+                Complete the lesson first, then take the assessment without answer hints.
+              </p>
+              <Link className="primaryButton inlineButton" href={"/assessment/" + module.id}>
+                Take graded assessment →
+              </Link>
             </div>
           )}
 
