@@ -3,6 +3,7 @@ import { callAI, parseJsonObject } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { loadAgentMemories, saveAgentMemory } from "@/lib/memory";
 import { retrieveCourseContextHybrid } from "@/lib/rag";
+import { consumeAIQuota } from "@/lib/usage";
 
 type Specialist = "diagnostician" | "architect" | "builder" | "reviewer" | "career";
 
@@ -30,6 +31,21 @@ function defaultRoute(task: string): Specialist[] {
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+
+  const quota = await consumeAIQuota({
+    subject: "user:" + user.id,
+    user,
+    feature: "orchestrator",
+  });
+  if (!quota.allowed) {
+    return NextResponse.json(
+      {
+        error: "Daily orchestrator allowance reached.",
+        quota,
+      },
+      { status: 429 },
+    );
+  }
 
   const body = await request.json().catch(() => ({}));
   const task = String(body.task || "").trim().slice(0, 8000);
@@ -131,5 +147,6 @@ export async function POST(request: Request) {
     traces,
     synthesis: finalSynthesis,
     liveAgents: traces.filter((item) => item.live).length,
+    quota,
   });
 }
