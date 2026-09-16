@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 export default function CertificateVerifier({ id }: { id: string }) {
@@ -22,6 +23,16 @@ export default function CertificateVerifier({ id }: { id: string }) {
             <div className="certificateSeal">✓</div>
             <h1>Verified Full Stack Master Class Credential</h1>
             <p className="certificateName">{data.data.certificate.learnerName}</p>
+            <div className="credentialQr">
+              <Image
+                src={"/api/certificates/" + encodeURIComponent(id) + "/qr"}
+                alt="Certificate verification QR code"
+                width={180}
+                height={180}
+                unoptimized
+              />
+              <span>Scan to verify this credential</span>
+            </div>
             <div className="certificateFacts">
               <span>ID <strong>{data.data.certificate.certificateId}</strong></span>
               <span>Readiness <strong>{data.data.certificate.readinessScore}/100</strong></span>
