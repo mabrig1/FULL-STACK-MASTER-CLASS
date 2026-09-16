@@ -28,6 +28,7 @@ export const collections = {
   evalRuns: "eval_runs",
   conceptMastery: "concept_mastery",
   remediationPlans: "remediation_plans",
+  modelBenchmarks: "model_benchmarks",
 } as const;
 
 function buildMongoUri() {
@@ -130,6 +131,7 @@ function ensureIndexes(db: Db) {
         db.collection(collections.conceptMastery).createIndex({ userId: 1, moduleId: 1, skillTag: 1 }, { unique: true }),
         db.collection(collections.conceptMastery).createIndex({ userId: 1, mastery: 1 }),
         db.collection(collections.remediationPlans).createIndex({ userId: 1, moduleId: 1, createdAt: -1 }),
+        db.collection(collections.modelBenchmarks).createIndex({ createdAt: -1 }),
       ]);
     })().catch((error) => {
       indexesPromise = null;
