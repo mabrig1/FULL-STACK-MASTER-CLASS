@@ -147,12 +147,59 @@ function encodedRepoPath(path: string) {
 function filePriority(path: string) {
   const lower = path.toLowerCase();
   let score = 0;
-  if (/^(app|src|pages|lib|server|api|components)//.test(lower)) score += 8;
-  if (/(route|api|auth|security|middleware|db|database|schema|test|spec|config)/.test(lower)) score += 7;
-  if (/.(ts|tsx|js|jsx|py|go|java|cs)$/.test(lower)) score += 5;
-  if (/package.json$|next.config|vercel.json|dockerfile|readme/i.test(lower)) score += 4;
-  if (/.test.|.spec.|__tests__/.test(lower)) score += 6;
-  if (/lock$|.map$|dist/|build/|coverage/|public/|assets/|vendor//.test(lower)) score -= 20;
+
+  const topLevelFolders = ["app/", "src/", "pages/", "lib/", "server/", "api/", "components/"];
+  if (topLevelFolders.some((prefix) => lower.startsWith(prefix))) score += 8;
+
+  const importantTerms = [
+    "route",
+    "api",
+    "auth",
+    "security",
+    "middleware",
+    "db",
+    "database",
+    "schema",
+    "test",
+    "spec",
+    "config",
+  ];
+  if (importantTerms.some((term) => lower.includes(term))) score += 7;
+
+  const sourceExtensions = [".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".java", ".cs"];
+  if (sourceExtensions.some((ext) => lower.endsWith(ext))) score += 5;
+
+  if (
+    lower.endsWith("package.json") ||
+    lower.includes("next.config") ||
+    lower.endsWith("vercel.json") ||
+    lower.endsWith("dockerfile") ||
+    lower.includes("readme")
+  ) {
+    score += 4;
+  }
+
+  if (lower.includes(".test.") || lower.includes(".spec.") || lower.includes("__tests__")) {
+    score += 6;
+  }
+
+  const noisyPaths = [
+    "dist/",
+    "build/",
+    "coverage/",
+    "public/",
+    "assets/",
+    "vendor/",
+    "node_modules/",
+  ];
+  if (
+    lower.endsWith("lock") ||
+    lower.endsWith(".map") ||
+    noisyPaths.some((part) => lower.includes(part))
+  ) {
+    score -= 20;
+  }
+
   return score;
 }
 
@@ -181,7 +228,11 @@ export async function fetchRepoContext(
 
   const candidates = entries
     .filter((item: any) => item?.type === "blob" && Number(item?.size || 0) <= 120000)
-    .filter((item: any) => /.(ts|tsx|js|jsx|json|md|py|go|java|cs|yml|yaml)$/i.test(String(item.path || "")))
+    .filter((item: any) => {
+      const path = String(item.path || "").toLowerCase();
+      return [".ts", ".tsx", ".js", ".jsx", ".json", ".md", ".py", ".go", ".java", ".cs", ".yml", ".yaml"]
+        .some((ext) => path.endsWith(ext));
+    })
     .map((item: any) => ({
       path: String(item.path),
       size: Number(item.size || 0),
