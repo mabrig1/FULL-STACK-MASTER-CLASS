@@ -25,7 +25,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         setError(data.error || "Unable to continue.");
         return;
       }
-      window.location.href = "/dashboard";
+      window.location.href = mode === "register" || !data.user?.onboardingComplete ? "/onboarding" : "/dashboard";
     } catch {
       setError("The account service is temporarily unavailable.");
     } finally {
@@ -46,7 +46,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         <form onSubmit={submit} className="stackForm">
           {mode === "register" && <input name="name" placeholder="Full name" minLength={2} required />}
           <input name="email" type="email" placeholder="Email address" required />
-          <input name="password" type="password" placeholder="Password (8+ characters)" minLength={8} required />
+          <input name="password" type="password" placeholder="Password (10+ characters)" minLength={10} required />
           {error && <div className="formError">{error}</div>}
           <button className="primaryButton" disabled={busy}>
             {busy ? "Working…" : mode === "login" ? "Sign in" : "Create account"}
