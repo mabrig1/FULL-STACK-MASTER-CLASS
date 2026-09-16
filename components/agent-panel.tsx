@@ -28,6 +28,12 @@ export default function AgentPanel({
   );
   const [actions, setActions] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [meta, setMeta] = useState<{
+    skill?: { id: string; label: string };
+    groundingStrength?: string;
+    grounding?: Array<{ moduleId: number; title: string; source: string }>;
+    cognitiveLoad?: { level: string; score: number } | null;
+  }>({});
   const [service, setService] = useState<{ status: "idle" | "live" | "fallback"; error?: string }>({
     status: "idle",
   });
@@ -39,6 +45,7 @@ export default function AgentPanel({
     setReply("Thinking through the best learning move…");
     setActions([]);
     setService({ status: "idle" });
+    setMeta({});
 
     try {
       const response = await fetch("/api/agent", {
@@ -52,6 +59,12 @@ export default function AgentPanel({
       setService({
         status: data.aiStatus === "live" ? "live" : "fallback",
         error: data.aiErrorCode || undefined,
+      });
+      setMeta({
+        skill: data.skill,
+        groundingStrength: data.groundingStrength,
+        grounding: data.grounding,
+        cognitiveLoad: data.cognitiveLoad,
       });
     } catch {
       setReply("The mentor service is temporarily unavailable. Keep building and try again.");
@@ -96,6 +109,17 @@ export default function AgentPanel({
           </button>
         ))}
       </div>
+
+      {(meta.skill || meta.groundingStrength) && (
+        <div className="agentContextBar">
+          {meta.skill && <span>Skill · <strong>{meta.skill.label}</strong></span>}
+          {meta.groundingStrength && <span>Grounding · <strong>{meta.groundingStrength}</strong></span>}
+          {meta.cognitiveLoad && <span>Load · <strong>{meta.cognitiveLoad.level} {meta.cognitiveLoad.score}/100</strong></span>}
+          {meta.grounding?.slice(0, 3).map((item) => (
+            <span key={item.moduleId}>M{item.moduleId} · {item.source}</span>
+          ))}
+        </div>
+      )}
 
       <div className="agentReply markdownReply">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{reply}</ReactMarkdown>
