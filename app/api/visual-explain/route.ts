@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { callAI, parseJsonObject } from "@/lib/ai";
+import { callAI, getAIStatus, parseJsonObject } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { getModule } from "@/lib/course";
 import { getCourseContent } from "@/lib/content";
 import { requestFingerprint } from "@/lib/security";
 import { consumeAIQuota } from "@/lib/usage";
+import { recordAgentTrace } from "@/lib/agent-observability";
 
 type VisualNode = {
   id: string;
@@ -48,6 +49,7 @@ function fallbackVisual(content: Awaited<ReturnType<typeof getCourseContent>>) {
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   const body = await request.json().catch(() => ({}));
   const moduleId = Number(body.moduleId);
   const focus = String(body.focus || "").trim().slice(0, 800);
@@ -70,6 +72,7 @@ export async function POST(request: Request) {
 
   const content = await getCourseContent(moduleId);
   let visual = null as ReturnType<typeof fallbackVisual> | null;
+  let liveGenerated = false;
 
   try {
     const raw = await callAI([
@@ -120,12 +123,32 @@ export async function POST(request: Request) {
         nodes,
         edges,
       };
+      liveGenerated = true;
     }
   } catch {
     visual = null;
   }
 
   if (!visual) visual = fallbackVisual(content);
+
+  const aiStatus = getAIStatus();
+  await recordAgentTrace({
+    userId: user?.id || null,
+    kind: "visual",
+    mode: focus || "core-mental-model",
+    input: "Visual explanation for Module " + moduleId + ": " + module.title,
+    output: visual.title + "\n" + visual.summary,
+    status: liveGenerated ? "live" : "fallback",
+    latencyMs: Date.now() - startedAt,
+    provider: aiStatus.provider,
+    model: aiStatus.model,
+    groundingStrength: "strong",
+    retrievedModules: [moduleId],
+    metadata: {
+      nodeCount: visual.nodes.length,
+      edgeCount: visual.edges.length,
+    },
+  }).catch(() => undefined);
 
   return NextResponse.json({
     moduleId,
