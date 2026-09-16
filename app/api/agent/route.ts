@@ -8,6 +8,7 @@ import { consumeAIQuota } from "@/lib/usage";
 import { selectAgentSkill } from "@/lib/agent-skills";
 import { computeAdaptiveState } from "@/lib/mastery";
 import { recordAgentTrace } from "@/lib/agent-observability";
+import { AGENT_POLICY_VERSION, mentorEvaluationPolicy } from "@/lib/agent-policy";
 
 type AgentMode = "tutor" | "code-review" | "project-coach" | "quiz" | "career";
 
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
           content:
             personas[mode] +
             "\nActive agent skill: " + skill.label + ". " + skill.instructions +
-            "\nYou are part of the Full Stack Master Class mentor swarm. Ground answers in the retrieved course context. " +
+            "\nPolicy version: " + AGENT_POLICY_VERSION + ". " + mentorEvaluationPolicy + "\nYou are part of the Full Stack Master Class mentor swarm. Ground answers in the retrieved course context. " +
             "Use learner memory only when relevant. Never claim code ran unless evidence confirms it. " +
             "For production examples: never trust unsigned client cookies for authorization, validate input, reuse the shared database helper instead of opening a new MongoClient per request, keep secrets server-only, and distinguish demo shortcuts from production patterns. " +
             "Return clean GitHub-flavored Markdown without escaping Markdown syntax. Keep the learner building." +
@@ -186,6 +187,7 @@ export async function POST(request: Request) {
       aiErrorCode,
       memoryEnabled: Boolean(user),
       cognitiveLoad: adaptive?.cognitiveLoad?.level || null,
+      policyVersion: AGENT_POLICY_VERSION,
     },
   }).catch(() => undefined);
 
@@ -211,5 +213,6 @@ export async function POST(request: Request) {
     })),
     adaptiveRecommendation: adaptive?.recommendation || null,
     cognitiveLoad: adaptive?.cognitiveLoad || null,
+    policyVersion: AGENT_POLICY_VERSION,
   });
 }
