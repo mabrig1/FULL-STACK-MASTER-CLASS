@@ -6,19 +6,41 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!canManageAcademy(user)) return NextResponse.json({ error: "Instructor access required." }, { status: 403 });
   const db = await getDb();
+  const today = new Date().toISOString().slice(0, 10);
 
-  const [learners, submissions, verified, cohorts, payments, recentSubmissions] = await Promise.all([
+  const [
+    learners,
+    submissions,
+    verified,
+    cohorts,
+    payments,
+    recentSubmissions,
+    aiUsageToday,
+    onboardedLearners,
+  ] = await Promise.all([
     db.collection(collections.users).countDocuments({ role: "student" }),
     db.collection(collections.submissions).countDocuments(),
     db.collection(collections.submissions).countDocuments({ githubVerified: true }),
     db.collection(collections.cohorts).countDocuments(),
     db.collection(collections.payments).find({ status: "success" }).toArray(),
     db.collection(collections.submissions).find().sort({ createdAt: -1 }).limit(10).toArray(),
+    db.collection(collections.aiUsage).find({ date: today }).toArray(),
+    db.collection(collections.users).countDocuments({ role: "student", onboardingComplete: true }),
   ]);
 
   const revenueNgn = payments.reduce((sum, item) => sum + Number(item.amountNgn || 0), 0);
+  const aiCallsToday = aiUsageToday.reduce((sum, item) => sum + Number(item.count || 0), 0);
+
   return NextResponse.json({
-    metrics: { learners, submissions, verified, cohorts, revenueNgn },
+    metrics: {
+      learners,
+      onboardedLearners,
+      submissions,
+      verified,
+      cohorts,
+      revenueNgn,
+      aiCallsToday,
+    },
     recentSubmissions: recentSubmissions.map((item) => ({
       id: item._id.toString(),
       moduleId: item.moduleId,
