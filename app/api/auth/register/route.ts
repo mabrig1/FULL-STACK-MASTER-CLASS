@@ -12,6 +12,9 @@ import {
   requestFingerprint,
   writeAuditEvent,
 } from "@/lib/security";
+import { createNotification } from "@/lib/notifications";
+import { issueAccountToken } from "@/lib/account-tokens";
+import { isEmailConfigured, sendTransactionalEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   if (!isDatabaseConfigured()) {
@@ -64,22 +67,61 @@ export async function POST(request: Request) {
       goal: "",
     },
     onboardingComplete: false,
+    emailVerifiedAt: null,
     createdAt: now,
     updatedAt: now,
   });
 
-  const session = await createSession(result.insertedId.toString());
+  const userId = result.insertedId.toString();
+  const session = await createSession(userId);
+
+  await createNotification({
+    userId,
+    title: "Welcome to Full Stack Master Class",
+    body: "Start with Module 1, complete your learning profile and turn every lesson into visible developer evidence.",
+    href: "/learn/1",
+    type: "welcome",
+  });
+
+  let verificationSent = false;
+  if (isEmailConfigured()) {
+    const issued = await issueAccountToken({
+      userId,
+      purpose: "verify-email",
+      ttlMinutes: 60 * 24,
+    });
+    const appUrl = (process.env.APP_URL || "https://fullstack.mabrigkorie.org").replace(/\/$/, "");
+    const verifyUrl = appUrl + "/verify-email?token=" + encodeURIComponent(issued.token);
+    const sent = await sendTransactionalEmail({
+      to: email,
+      subject: "Verify your Full Stack Master Class email",
+      html:
+        "<h2>Welcome to Full Stack Master Class</h2>" +
+        "<p>Verify your email to strengthen your developer identity and credential evidence.</p>" +
+        '<p><a href="' + verifyUrl + '">Verify email address</a></p>' +
+        "<p>This link expires in 24 hours.</p>",
+    });
+    verificationSent = sent.sent;
+  }
 
   await writeAuditEvent({
     event: "auth.registered",
-    actorId: result.insertedId.toString(),
+    actorId: userId,
     actorEmail: email,
     request,
-    metadata: { role },
+    metadata: { role, verificationSent },
   });
 
   const response = NextResponse.json({
-    user: { id: result.insertedId.toString(), name, email, role, onboardingComplete: false },
+    user: {
+      id: userId,
+      name,
+      email,
+      role,
+      onboardingComplete: false,
+      emailVerified: false,
+    },
+    verificationSent,
   });
   response.cookies.set(SESSION_COOKIE, session.token, {
     httpOnly: true,
