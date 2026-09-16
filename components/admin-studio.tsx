@@ -45,6 +45,7 @@ export default function AdminStudio() {
       </section>
 
       <section className="adminCommandBar">
+        <Link href="/admin/course">Course Studio →</Link>
         <Link href="/admin/learners">Manage learners →</Link>
         <Link href="/admin/audit">Audit trail →</Link>
         <Link href="/cohorts">Cohorts →</Link>
