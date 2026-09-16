@@ -70,6 +70,8 @@ export default function AccountPanel() {
       </div>
       <div className="actionRow">
         <Link className="secondaryButton" href="/platform">Open platform</Link>
+        <Link className="secondaryButton" href="/onboarding">Learning profile</Link>
+        <Link className="secondaryButton" href="/security">Security</Link>
         <Link className="secondaryButton" href="/pricing">Upgrade</Link>
         <button className="secondaryButton" onClick={requestCertificate}>Request certificate</button>
         <button className="secondaryButton" onClick={logout}>Sign out</button>
