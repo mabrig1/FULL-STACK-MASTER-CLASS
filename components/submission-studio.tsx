@@ -18,6 +18,7 @@ export default function SubmissionStudio() {
   const [message, setMessage] = useState("");
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState("");
+  const [reviewEffort, setReviewEffort] = useState<"lite" | "balanced" | "deep">("balanced");
 
   async function load() {
     const response = await fetch("/api/submissions");
@@ -49,7 +50,11 @@ export default function SubmissionStudio() {
 
   async function action(id: string, kind: "verify" | "grade") {
     setBusy(id + kind);
-    const response = await fetch("/api/submissions/" + id + "/" + kind, { method: "POST" });
+    const response = await fetch("/api/submissions/" + id + "/" + kind, {
+      method: "POST",
+      headers: kind === "grade" ? { "Content-Type": "application/json" } : undefined,
+      body: kind === "grade" ? JSON.stringify({ effort: reviewEffort }) : undefined,
+    });
     const data = await response.json();
     setBusy("");
     setMessage(data.message || data.error || (kind === "grade" ? "Project graded." : "Verification complete."));
@@ -90,7 +95,20 @@ export default function SubmissionStudio() {
       </section>
 
       <section className="commercialSection">
-        <div className="sectionMiniHeading"><h2>Your project ledger</h2><span>{rows.length} submissions</span></div>
+        <div className="sectionMiniHeading">
+          <div>
+            <h2>Your project ledger</h2>
+            <span>{rows.length} submissions</span>
+          </div>
+          <label className="reviewEffortPicker">
+            Review depth
+            <select value={reviewEffort} onChange={(e) => setReviewEffort(e.target.value as "lite" | "balanced" | "deep")}>
+              <option value="lite">Lite · fast signal check</option>
+              <option value="balanced">Balanced · repository context</option>
+              <option value="deep">Deep · broader repository inspection</option>
+            </select>
+          </label>
+        </div>
         <div className="tableLike">
           {rows.map((row) => (
             <article className="tableRow submissionRow" key={row.id}>
