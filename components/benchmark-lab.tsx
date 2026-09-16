@@ -37,11 +37,10 @@ export default function BenchmarkLab() {
       </section>
 
       <section className="commercialSection">
-        <span className="eyebrow">NEXT BENCHMARK GAP</span>
-        <h2>Multimodal tutoring remains the clearest unimplemented frontier.</h2>
+        <span className="eyebrow">BENCHMARK STATUS</span>
+        <h2>All tracked AI-native learning dimensions are now implemented.</h2>
         <p className="muted">
-          The current system is strong in adaptive learning, evidence, agents and code review.
-          A future layer can add context-triggered diagrams, visual debugging aids and optional voice.
+          Coverage here means the capability exists in this repository. It is not a market ranking; production outcomes still require learner testing, latency/cost monitoring and quality evaluation.
         </p>
       </section>
     </main>
