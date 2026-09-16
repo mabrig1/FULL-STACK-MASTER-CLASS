@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import AgentPanel from "@/components/agent-panel";
 import { CourseModule } from "@/lib/course";
 import type { CourseContent } from "@/lib/content";
+import VisualExplainer from "@/components/visual-explainer";
 
 const STORAGE_KEY = "fsmc-progress-v1";
 
@@ -116,6 +117,8 @@ export default function LessonExperience({
               </section>
             ))}
           </div>
+
+          <VisualExplainer moduleId={module.id} />
 
           <div className="lessonLab">
             <span className="eyebrow">GUIDED LAB</span>
