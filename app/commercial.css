@@ -1207,3 +1207,159 @@
   .riskAction,
   .riskIdentity { flex-direction: column; }
 }
+
+.modelBenchForm {
+  display: grid;
+  grid-template-columns: 1.4fr .6fr;
+  gap: 24px;
+  align-items: start;
+}
+.modelBenchIdentity {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.modelBenchIdentity span {
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.modelBenchIdentity strong {
+  display: block;
+  color: var(--text);
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+.promotionThresholds {
+  display: grid;
+  gap: 8px;
+}
+.promotionThresholds > span:not(.eyebrow) {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
+.promotionThresholds strong { color: var(--text); }
+.promotionVerdict {
+  margin: 34px 0 0;
+  padding: 30px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+}
+.promotionVerdict.pass {
+  border-color: rgba(123,247,181,.35);
+  background: rgba(123,247,181,.035);
+}
+.promotionVerdict.hold {
+  border-color: rgba(255,155,143,.3);
+  background: rgba(255,155,143,.025);
+}
+.promotionVerdict > strong {
+  display: block;
+  font-size: clamp(72px,12vw,140px);
+  line-height: .8;
+  letter-spacing: -.07em;
+  margin: 18px 0;
+}
+.promotionVerdict.pass > strong { color: var(--accent); }
+.promotionVerdict.hold > strong { color: var(--danger); }
+.promotionVerdict h2 {
+  text-transform: capitalize;
+  margin: 10px 0;
+}
+.promotionVerdict p { color: var(--muted); }
+.modelComparisonGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.modelComparisonGrid h2 {
+  font-size: 24px;
+  overflow-wrap: anywhere;
+}
+.modelMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 8px;
+  margin: 18px 0;
+}
+.modelMetricGrid span {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.modelMetricGrid strong {
+  display: block;
+  color: var(--text);
+  font-size: 19px;
+  margin-top: 5px;
+}
+.modelCaseList {
+  display: grid;
+  gap: 7px;
+}
+.modelCaseList article {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.modelCaseList small {
+  grid-column: 2;
+  color: var(--muted);
+}
+.gateChecks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.gateChecks span {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11px;
+}
+.benchmarkRunHistory {
+  display: grid;
+  gap: 8px;
+}
+.benchmarkRunHistory button {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.benchmarkRunHistory time,
+.benchmarkRunHistory button > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+@media (max-width: 900px) {
+  .modelBenchForm,
+  .modelComparisonGrid { grid-template-columns: 1fr; }
+  .modelMetricGrid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 620px) {
+  .modelBenchIdentity,
+  .modelMetricGrid,
+  .benchmarkRunHistory button { grid-template-columns: 1fr; }
+}
