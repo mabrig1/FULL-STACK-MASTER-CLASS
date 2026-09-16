@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import { callAI, parseJsonObject } from "@/lib/ai";
+import { callAI, getAIStatus, parseJsonObject } from "@/lib/ai";
 import { getCurrentUser, canManageAcademy } from "@/lib/auth";
 import { collections, getDb } from "@/lib/db";
 import { getModule } from "@/lib/course";
 import { fetchRepoContext, fetchRepoEvidence, type ReviewEffort } from "@/lib/github";
 import { consumeAIQuota } from "@/lib/usage";
+import { recordAgentTrace } from "@/lib/agent-observability";
 
 type AIGrade = {
   adjustment?: number;
@@ -19,6 +20,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const startedAt = Date.now();
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const quota = await consumeAIQuota({
@@ -136,6 +138,27 @@ export async function POST(
     { _id: submission._id },
     { $set: { grade, status: "graded", updatedAt: new Date() } },
   );
+
+  const aiStatus = getAIStatus();
+  await recordAgentTrace({
+    userId: String(submission.userId),
+    kind: "grading",
+    mode: effort,
+    input: "Grade " + evidence.fullName + " for Module " + module.id + ": " + module.title,
+    output: grade.summary + "\nScore: " + score + "/100",
+    status: aiGrade ? "live" : "fallback",
+    latencyMs: Date.now() - startedAt,
+    provider: aiStatus.provider,
+    model: aiStatus.model,
+    retrievedModules: [module.id],
+    metadata: {
+      score,
+      baseScore,
+      adjustment,
+      filesReviewed: repoContext.files.map((file) => file.path),
+      githubVerified: Boolean(submission.githubVerified),
+    },
+  }).catch(() => undefined);
 
   return NextResponse.json({
     grade,
