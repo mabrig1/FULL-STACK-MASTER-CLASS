@@ -3,6 +3,20 @@ export type AIMessage = {
   content: string;
 };
 
+export type AICompletionTelemetry = {
+  content: string;
+  provider: "openrouter" | "vercel-ai-gateway";
+  model: string;
+  requestedModel: string;
+  fallbackUsed: boolean;
+  latencyMs: number;
+  usage: {
+    promptTokens: number | null;
+    completionTokens: number | null;
+    totalTokens: number | null;
+  };
+};
+
 type AIProvider = {
   name: "openrouter" | "vercel-ai-gateway";
   apiKey: string;
@@ -162,7 +176,7 @@ function buildHeaders(provider: AIProvider) {
   if (provider.name === "openrouter") {
     headers["HTTP-Referer"] =
       process.env.APP_URL || "https://fullstack.mabrigkorie.org";
-    headers["X-Title"] = "Full Stack Master Class";
+    headers["X-OpenRouter-Title"] = "Full Stack Master Class";
   }
 
   return headers;
@@ -187,6 +201,56 @@ async function requestCompletion(
   });
 }
 
+async function parseCompletionPayload(
+  provider: AIProvider,
+  response: Response,
+  model: string,
+  requestedModel: string,
+  fallbackUsed: boolean,
+  latencyMs: number,
+): Promise<AICompletionTelemetry> {
+  if (!response.ok) {
+    throw new AIRequestError(
+      provider.name,
+      response.status,
+      safeErrorCode(response.status),
+    );
+  }
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+
+  if (!content || typeof content !== "string") {
+    throw new AIRequestError(provider.name, 502, "empty-model-response");
+  }
+
+  const usage = data?.usage || {};
+  const promptTokens =
+    typeof usage?.prompt_tokens === "number" ? usage.prompt_tokens : null;
+  const completionTokens =
+    typeof usage?.completion_tokens === "number" ? usage.completion_tokens : null;
+  const totalTokens =
+    typeof usage?.total_tokens === "number"
+      ? usage.total_tokens
+      : promptTokens !== null && completionTokens !== null
+        ? promptTokens + completionTokens
+        : null;
+
+  return {
+    content,
+    provider: provider.name,
+    model,
+    requestedModel,
+    fallbackUsed,
+    latencyMs,
+    usage: {
+      promptTokens,
+      completionTokens,
+      totalTokens,
+    },
+  };
+}
+
 async function extractCompletion(provider: AIProvider, response: Response) {
   if (!response.ok) {
     throw new AIRequestError(
@@ -206,32 +270,69 @@ async function extractCompletion(provider: AIProvider, response: Response) {
   return content;
 }
 
+export async function callAIWithTelemetry(
+  messages: AIMessage[],
+  options: {
+    temperature?: number;
+    maxTokens?: number;
+    model?: string;
+    disableFallback?: boolean;
+  } = {},
+): Promise<AICompletionTelemetry | null> {
+  const provider = getProvider();
+  const requestedModel =
+    options.model?.trim() || process.env.AI_MODEL?.trim() || "";
+
+  if (!provider || !requestedModel) return null;
+
+  const startedAt = Date.now();
+  const primary = await requestCompletion(
+    provider,
+    requestedModel,
+    messages,
+    options,
+  );
+
+  if (
+    !options.disableFallback &&
+    provider.name === "openrouter" &&
+    primary.status === 402 &&
+    requestedModel !== fallbackModel()
+  ) {
+    const fallback = fallbackModel();
+    const retryStartedAt = Date.now();
+    const freeRetry = await requestCompletion(
+      provider,
+      fallback,
+      messages,
+      options,
+    );
+    return parseCompletionPayload(
+      provider,
+      freeRetry,
+      fallback,
+      requestedModel,
+      true,
+      Date.now() - retryStartedAt,
+    );
+  }
+
+  return parseCompletionPayload(
+    provider,
+    primary,
+    requestedModel,
+    requestedModel,
+    false,
+    Date.now() - startedAt,
+  );
+}
+
 export async function callAI(
   messages: AIMessage[],
   options: { temperature?: number; maxTokens?: number } = {},
 ): Promise<string | null> {
-  const provider = getProvider();
-  const model = process.env.AI_MODEL?.trim();
-
-  if (!provider || !model) return null;
-
-  const primary = await requestCompletion(provider, model, messages, options);
-
-  if (
-    provider.name === "openrouter" &&
-    primary.status === 402 &&
-    model !== fallbackModel()
-  ) {
-    const freeRetry = await requestCompletion(
-      provider,
-      fallbackModel(),
-      messages,
-      options,
-    );
-    return extractCompletion(provider, freeRetry);
-  }
-
-  return extractCompletion(provider, primary);
+  const result = await callAIWithTelemetry(messages, options);
+  return result?.content || null;
 }
 
 export function parseJsonObject<T = Record<string, unknown>>(value: string | null): T | null {
