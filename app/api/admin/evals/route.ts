@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { callAI, getAIErrorCode, getAIStatus } from "@/lib/ai";
+import { callAIWithTelemetry, getAIErrorCode, getAIStatus } from "@/lib/ai";
 import { canManageAcademy, getCurrentUser } from "@/lib/auth";
 import { collections, getDb } from "@/lib/db";
 import { evalCases, scoreEvalResponse } from "@/lib/eval-cases";
 import { selectAgentSkill } from "@/lib/agent-skills";
 import { recordAgentTrace } from "@/lib/agent-observability";
+import { AGENT_POLICY_VERSION, mentorEvaluationPolicy } from "@/lib/agent-policy";
 
 export async function GET() {
   const staff = await getCurrentUser();
@@ -51,23 +52,27 @@ export async function POST() {
     const skill = selectAgentSkill("tutor", test.prompt);
     let output = "";
     let errorCode: string | null = null;
+    let latencyMs = 0;
+    let totalTokens: number | null = null;
 
     try {
-      output =
-        (await callAI(
-          [
-            {
-              role: "system",
-              content:
-                "You are the Full Stack Master Class mentor under evaluation. " +
-                "Follow production engineering discipline: separate facts from assumptions, never claim execution without evidence, " +
-                "require server-side authorization, validate inputs, keep secrets server-only and make learning responses practical. " +
-                "Active skill: " + skill.label + ". " + skill.instructions,
-            },
-            { role: "user", content: test.prompt },
-          ],
-          { temperature: 0, maxTokens: 800 },
-        )) || "";
+      const telemetry = await callAIWithTelemetry(
+        [
+          {
+            role: "system",
+            content:
+              "You are the Full Stack Master Class mentor under evaluation. " +
+              mentorEvaluationPolicy +
+              " Policy version: " + AGENT_POLICY_VERSION + ". " +
+              "Active skill: " + skill.label + ". " + skill.instructions,
+          },
+          { role: "user", content: test.prompt },
+        ],
+        { temperature: 0, maxTokens: 800 },
+      );
+      output = telemetry?.content || "";
+      latencyMs = telemetry?.latencyMs || 0;
+      totalTokens = telemetry?.usage.totalTokens ?? null;
     } catch (error) {
       errorCode = getAIErrorCode(error);
     }
@@ -80,6 +85,8 @@ export async function POST() {
       output: output.slice(0, 5000),
       skill: skill.id,
       errorCode,
+      latencyMs,
+      totalTokens,
       ...scored,
     });
   }
@@ -99,6 +106,7 @@ export async function POST() {
     total: results.length,
     provider: aiStatus.provider,
     model: aiStatus.model,
+    policyVersion: AGENT_POLICY_VERSION,
     results,
     createdBy: staff!.id,
     createdAt: new Date(),
@@ -114,7 +122,7 @@ export async function POST() {
     latencyMs: Date.now() - startedAt,
     provider: aiStatus.provider,
     model: aiStatus.model,
-    metadata: { score, passRate, passed, total: results.length },
+    metadata: { score, passRate, passed, total: results.length, policyVersion: AGENT_POLICY_VERSION },
   }).catch(() => undefined);
 
   return NextResponse.json({
@@ -124,6 +132,7 @@ export async function POST() {
     passRate,
     passed,
     total: results.length,
+    policyVersion: AGENT_POLICY_VERSION,
     results,
   });
 }
