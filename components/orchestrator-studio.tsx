@@ -8,6 +8,11 @@ type Result = {
   traces: Array<{ agent: string; output: string; live: boolean }>;
   synthesis: string;
   liveAgents: number;
+  effort?: string;
+  adaptive?: {
+    recommendation?: { type: string; moduleId: number; title: string; reason: string } | null;
+    cognitiveLoad?: { level: string; score: number; intervention: string } | null;
+  } | null;
 };
 
 export default function OrchestratorStudio() {
@@ -23,7 +28,7 @@ export default function OrchestratorStudio() {
     const response = await fetch("/api/orchestrator", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ task: form.get("task") }),
+      body: JSON.stringify({ task: form.get("task"), effort: form.get("effort") }),
     });
     const data = await response.json();
     setBusy(false);
@@ -44,6 +49,11 @@ export default function OrchestratorStudio() {
 
       <section className="commercialSection">
         <form className="stackForm" onSubmit={run}>
+          <select name="effort" defaultValue="balanced">
+            <option value="lite">Lite · 2-agent fast mission</option>
+            <option value="balanced">Balanced · 3-agent supervised mission</option>
+            <option value="deep">Deep · 4-agent mission with independent evaluator</option>
+          </select>
           <textarea
             name="task"
             rows={6}
@@ -61,7 +71,15 @@ export default function OrchestratorStudio() {
             <span className="eyebrow">SUPERVISOR ROUTE</span>
             <h2>{result.supervisorGoal}</h2>
             <div className="chipRow">{result.route.map((agent) => <span key={agent}>{agent}</span>)}</div>
-            <p className="muted">{result.liveAgents} specialist agents used live AI on this run.</p>
+            <p className="muted">{result.liveAgents} specialist agents used live AI on this run · effort {result.effort || "balanced"}.</p>
+            {result.adaptive?.cognitiveLoad && (
+              <div className="orchestratorAdaptive">
+                <span>Load <strong>{result.adaptive.cognitiveLoad.level} · {result.adaptive.cognitiveLoad.score}/100</strong></span>
+                {result.adaptive.recommendation && (
+                  <span>Adaptive target <strong>M{result.adaptive.recommendation.moduleId} · {result.adaptive.recommendation.type}</strong></span>
+                )}
+              </div>
+            )}
           </section>
           <section className="agentTraceGrid">
             {result.traces.map((trace, index) => (
