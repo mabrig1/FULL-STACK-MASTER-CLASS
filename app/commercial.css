@@ -677,3 +677,55 @@
 @media (max-width: 620px) {
   .accountFactsFour { grid-template-columns: 1fr; }
 }
+
+.credentialQr {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: max-content;
+  margin: 28px auto 4px;
+  padding: 14px;
+  border-radius: 18px;
+  background: #fff;
+  color: #15231e;
+}
+.credentialQr img {
+  display: block;
+}
+.credentialQr span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+.gradeAnalyticsRow {
+  grid-template-columns: minmax(230px,1.4fr) .8fr .8fr 1fr;
+}
+.announcementHistory {
+  display: grid;
+  gap: 10px;
+}
+.announcementHistory article {
+  display: grid;
+  grid-template-columns: minmax(260px,1.5fr) .5fr .5fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.announcementHistory p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.announcementHistory span,
+.announcementHistory time {
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 900px) {
+  .gradeAnalyticsRow,
+  .announcementHistory article {
+    grid-template-columns: 1fr;
+  }
+}
