@@ -54,7 +54,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         </form>
         <small>
           {mode === "login" ? (
-            <>New learner? <Link href="/register">Create an account</Link>.</>
+            <>New learner? <Link href="/register">Create an account</Link>. <Link href="/forgot-password">Forgot password?</Link></>
           ) : (
             <>Already registered? <Link href="/login">Sign in</Link>.</>
           )}
