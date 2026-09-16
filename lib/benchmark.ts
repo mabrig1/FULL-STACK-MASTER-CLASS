@@ -101,9 +101,9 @@ export const benchmarkItems: BenchmarkItem[] = [
   {
     id: "multimodal-tutor",
     dimension: "Interactive multimodal tutor",
-    status: "planned",
-    evidence: "Not yet implemented",
-    pattern: "Context-triggered diagrams, voice or visual explanations inside a lesson.",
+    status: "implemented",
+    evidence: "VisualExplainer + /api/visual-explain",
+    pattern: "Context-triggered concept maps with optional browser read-aloud inside each lesson.",
   },
 ];
 
