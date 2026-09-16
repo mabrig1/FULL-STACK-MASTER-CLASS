@@ -46,7 +46,7 @@ export const benchmarkItems: BenchmarkItem[] = [
     id: "adaptive-practice",
     dimension: "AI-generated adaptive practice",
     status: "implemented",
-    evidence: "/practice + /api/practice",
+    evidence: "/adaptive + /api/practice",
     pattern: "Difficulty and questions adapt to current mastery and lesson content.",
   },
   {
