@@ -5,6 +5,8 @@ import { loadAgentMemories, saveAgentMemory } from "@/lib/memory";
 import { retrieveCourseContextHybrid } from "@/lib/rag";
 import { consumeAIQuota } from "@/lib/usage";
 import { computeAdaptiveState } from "@/lib/mastery";
+import { getAIStatus } from "@/lib/ai";
+import { recordAgentTrace } from "@/lib/agent-observability";
 
 type Specialist = "diagnostician" | "architect" | "builder" | "reviewer" | "evaluator" | "career";
 
@@ -32,6 +34,7 @@ function defaultRoute(task: string): Specialist[] {
 }
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
 
@@ -160,6 +163,26 @@ export async function POST(request: Request) {
     agentReply: finalSynthesis,
     tags: ["orchestrated", ...retrieval.map((item) => "module-" + item.moduleId)],
     importance: 3,
+  }).catch(() => undefined);
+
+  const aiStatus = getAIStatus();
+  await recordAgentTrace({
+    userId: user.id,
+    kind: "orchestrator",
+    mode: effort,
+    input: task,
+    output: finalSynthesis,
+    status: traces.some((item) => item.live) ? "live" : "fallback",
+    latencyMs: Date.now() - startedAt,
+    provider: aiStatus.provider,
+    model: aiStatus.model,
+    groundingStrength: retrieval.length ? "moderate" : "limited",
+    retrievedModules: retrieval.map((item) => item.moduleId),
+    metadata: {
+      route,
+      liveAgents: traces.filter((item) => item.live).length,
+      cognitiveLoad: adaptive?.cognitiveLoad?.level || null,
+    },
   }).catch(() => undefined);
 
   return NextResponse.json({
