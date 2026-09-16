@@ -26,6 +26,8 @@ export default function CertificateVerifier({ id }: { id: string }) {
               <span>ID <strong>{data.data.certificate.certificateId}</strong></span>
               <span>Readiness <strong>{data.data.certificate.readinessScore}/100</strong></span>
               <span>Verified projects <strong>{data.data.certificate.verifiedProjects}</strong></span>
+              <span>Assessment passes <strong>{data.data.certificate.passedAssessments}</strong></span>
+              <span>Email identity <strong>{data.data.certificate.emailVerified ? "verified" : "not recorded"}</strong></span>
               <span>Issued <strong>{new Date(data.data.certificate.issuedAt).toLocaleDateString()}</strong></span>
             </div>
           </>
