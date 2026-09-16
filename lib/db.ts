@@ -15,6 +15,9 @@ export const collections = {
   peerReviews: "peer_reviews",
   certificates: "certificates",
   courseKnowledge: "course_knowledge",
+  rateLimits: "rate_limits",
+  aiUsage: "ai_usage",
+  auditLogs: "audit_logs",
 } as const;
 
 function buildMongoUri() {
@@ -96,6 +99,11 @@ function ensureIndexes(db: Db) {
         db.collection(collections.peerReviews).createIndex({ reviewerId: 1, submissionId: 1 }, { unique: true }),
         db.collection(collections.certificates).createIndex({ certificateId: 1 }, { unique: true }),
         db.collection(collections.courseKnowledge).createIndex({ moduleId: 1 }, { unique: true }),
+        db.collection(collections.rateLimits).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+        db.collection(collections.aiUsage).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+        db.collection(collections.aiUsage).createIndex({ userId: 1, date: 1, feature: 1 }),
+        db.collection(collections.auditLogs).createIndex({ createdAt: -1 }),
+        db.collection(collections.auditLogs).createIndex({ actorId: 1, createdAt: -1 }),
       ]);
     })().catch((error) => {
       indexesPromise = null;
