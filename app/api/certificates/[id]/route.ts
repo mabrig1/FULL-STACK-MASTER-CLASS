@@ -20,6 +20,8 @@ export async function GET(
       issuedAt: certificate.issuedAt,
       readinessScore: certificate.readinessScore,
       verifiedProjects: certificate.verifiedProjects,
+      passedAssessments: certificate.passedAssessments || 0,
+      emailVerified: Boolean(certificate.emailVerified),
       status: certificate.status,
     },
   });
