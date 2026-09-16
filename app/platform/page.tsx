@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const tools = [
   ["LEARN", "Adaptive Academy", "Continue the 64-module mastery graph with cloud-synced progress.", "/dashboard"],
+  ["ADAPT", "Learning Intelligence", "Use mastery, prerequisite, practice and struggle signals to choose the next best action.", "/adaptive"],
   ["PLAN", "AI Study Plan", "Generate a personalized route from your goal, weekly time and current progress.", "/study-plan"],
   ["BUILD", "Secure Code Sandbox", "Run HTML, CSS and JavaScript in an isolated browser sandbox.", "/sandbox"],
   ["VERIFY", "Project Verification", "Submit GitHub projects and prove repository ownership with a verification challenge.", "/submissions"],
