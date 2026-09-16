@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { canManageAcademy, getCurrentUser } from "@/lib/auth";
 import { collections, getDb } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/security";
+import { createNotification } from "@/lib/notifications";
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -38,6 +39,7 @@ export async function GET(request: Request) {
       email: row.email,
       plan: row.plan || "free",
       onboardingComplete: Boolean(row.onboardingComplete),
+      emailVerified: Boolean(row.emailVerifiedAt),
       completed,
       verifiedProjects: verified,
       lastLoginAt: row.lastLoginAt || null,
@@ -69,6 +71,17 @@ export async function PATCH(request: Request) {
     { $set: { plan, entitlements, updatedAt: new Date() } },
   );
   if (!result.matchedCount) return NextResponse.json({ error: "Learner not found." }, { status: 404 });
+
+  await createNotification({
+    userId: learnerId,
+    title: plan === "masterclass" ? "Master Class access granted" : "Access plan updated",
+    body:
+      plan === "masterclass"
+        ? "Your Full Stack Master Class premium access is now active."
+        : "Your Full Stack Master Class account is now on the free plan.",
+    href: plan === "masterclass" ? "/dashboard" : "/pricing",
+    type: plan === "masterclass" ? "success" : "account",
+  });
 
   await writeAuditEvent({
     event: "admin.plan_changed",
