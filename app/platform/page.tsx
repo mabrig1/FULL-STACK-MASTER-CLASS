@@ -11,7 +11,9 @@ const tools = [
   ["REVIEW", "Peer Review", "Review verified projects using engineering rubrics and improve through feedback.", "/peer-review"],
   ["CREDENTIAL", "Certificates", "Issue and publicly verify evidence-backed Full Stack Master Class credentials.", "/account"],
   ["COMMERCE", "Plans & Access", "Unlock commercial course access through verified Paystack transactions.", "/pricing"],
-  ["OPERATE", "Instructor Studio", "Manage learners, cohorts, projects, revenue and academy quality.", "/admin"],
+  ["PROFILE", "Learner Profile", "Set your target role, experience level, weekly time and learning goal.", "/onboarding"],
+  ["SECURITY", "Account Security", "Change your password and revoke existing sessions.", "/security"],
+  ["OPERATE", "Instructor Studio", "Manage learners, cohorts, projects, AI usage, revenue and academy quality.", "/admin"],
 ];
 
 export default function PlatformPage() {
