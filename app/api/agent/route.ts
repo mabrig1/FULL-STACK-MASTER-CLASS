@@ -3,6 +3,8 @@ import { callAI, getAIErrorCode, getAIStatus } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { loadAgentMemories, saveAgentMemory } from "@/lib/memory";
 import { retrieveCourseContextHybrid } from "@/lib/rag";
+import { requestFingerprint } from "@/lib/security";
+import { consumeAIQuota } from "@/lib/usage";
 
 type AgentMode = "tutor" | "code-review" | "project-coach" | "quiz" | "career";
 
@@ -59,6 +61,28 @@ export async function POST(request: Request) {
 
   const aiConfig = getAIStatus();
   const user = await getCurrentUser();
+  const quota = await consumeAIQuota({
+    subject: user ? "user:" + user.id : "anon:" + requestFingerprint(request),
+    user,
+    feature: "mentor",
+  });
+
+  if (!quota.allowed) {
+    return NextResponse.json({
+      reply:
+        "You have reached today's AI mentor allowance. Continue with the module challenge and return after the daily reset, or use a paid Master Class account for a larger allowance.",
+      nextActions: ["Continue the build challenge", "Review previous mentor notes", "Upgrade access"],
+      source: "quota-guard",
+      retrievedModules: [],
+      memoryEnabled: Boolean(user),
+      aiStatus: "fallback",
+      aiErrorCode: "daily-ai-limit",
+      aiProvider: aiConfig.provider,
+      aiModel: aiConfig.model,
+      aiConfiguredInAgentRuntime: aiConfig.configured,
+      quota,
+    });
+  }
   const retrieval = await retrieveCourseContextHybrid(message + " " + context, 4);
   const memories = user ? await loadAgentMemories(user.id, 5) : [];
 
@@ -131,5 +155,6 @@ export async function POST(request: Request) {
     aiProvider: aiConfig.provider,
     aiModel: aiConfig.model,
     aiConfiguredInAgentRuntime: aiConfig.configured,
+    quota,
   });
 }
