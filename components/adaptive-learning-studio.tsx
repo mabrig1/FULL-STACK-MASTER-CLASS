@@ -20,6 +20,15 @@ type AdaptiveState = {
     reason: string;
   };
   reviewQueue: Array<{ moduleId: number; title: string }>;
+  weakConcepts: Array<{
+    moduleId: number;
+    moduleTitle: string;
+    skillTag: string;
+    mastery: number;
+    attempts: number;
+    correct: number;
+    nextReviewAt: string | null;
+  }>;
   cognitiveLoad: {
     score: number;
     level: "low" | "medium" | "high";
@@ -155,6 +164,39 @@ export default function AdaptiveLearningStudio() {
               </div>
             </article>
           </section>
+
+          {state.weakConcepts?.length > 0 && (
+            <section className="commercialSection">
+              <div className="sectionMiniHeading">
+                <div>
+                  <span className="eyebrow">CONCEPT RECOVERY QUEUE</span>
+                  <h2>Weak concepts that need direct reinforcement</h2>
+                </div>
+                <span>{state.weakConcepts.length} unresolved concepts</span>
+              </div>
+              <div className="conceptWeaknessGrid">
+                {state.weakConcepts.map((item, index) => (
+                  <article key={item.moduleId + "-" + item.skillTag + "-" + index}>
+                    <div>
+                      <span>M{item.moduleId}</span>
+                      <strong>{item.mastery}%</strong>
+                    </div>
+                    <h3>{item.skillTag}</h3>
+                    <p>{item.moduleTitle}</p>
+                    <small>{item.correct}/{item.attempts} correct attempts</small>
+                    <div className="actionRow">
+                      <button className="secondaryButton" disabled={busy} onClick={() => generate(item.moduleId)}>
+                        Practise
+                      </button>
+                      <button className="secondaryButton" disabled={busy} onClick={() => remediate(item.moduleId)}>
+                        Remediate
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="commercialSection">
             <div className="sectionMiniHeading">
