@@ -24,6 +24,10 @@ export const collections = {
   assessmentAttempts: "assessment_attempts",
   announcements: "announcements",
   practiceSessions: "practice_sessions",
+  agentTraces: "agent_traces",
+  evalRuns: "eval_runs",
+  conceptMastery: "concept_mastery",
+  remediationPlans: "remediation_plans",
 } as const;
 
 function buildMongoUri() {
@@ -118,6 +122,14 @@ function ensureIndexes(db: Db) {
         db.collection(collections.announcements).createIndex({ createdAt: -1 }),
         db.collection(collections.practiceSessions).createIndex({ userId: 1, moduleId: 1, createdAt: -1 }),
         db.collection(collections.practiceSessions).createIndex({ userId: 1, nextReviewAt: 1 }),
+        db.collection(collections.agentTraces).createIndex({ createdAt: -1 }),
+        db.collection(collections.agentTraces).createIndex({ userId: 1, createdAt: -1 }),
+        db.collection(collections.agentTraces).createIndex({ kind: 1, createdAt: -1 }),
+        db.collection(collections.agentTraces).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+        db.collection(collections.evalRuns).createIndex({ createdAt: -1 }),
+        db.collection(collections.conceptMastery).createIndex({ userId: 1, moduleId: 1, skillTag: 1 }, { unique: true }),
+        db.collection(collections.conceptMastery).createIndex({ userId: 1, mastery: 1 }),
+        db.collection(collections.remediationPlans).createIndex({ userId: 1, moduleId: 1, createdAt: -1 }),
       ]);
     })().catch((error) => {
       indexesPromise = null;
