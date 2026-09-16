@@ -39,6 +39,7 @@ export default function RootLayout({
             <Link href="/dashboard">Academy</Link>
             <Link href="/platform">Platform</Link>
             <Link href="/sandbox">Sandbox</Link>
+            <Link href="/notifications">Notifications</Link>
             <Link href="/account">Account</Link>
           </nav>
         </header>
