@@ -4,7 +4,7 @@ import { callAI, parseJsonObject } from "@/lib/ai";
 import { getCurrentUser, canManageAcademy } from "@/lib/auth";
 import { collections, getDb } from "@/lib/db";
 import { getModule } from "@/lib/course";
-import { fetchRepoEvidence } from "@/lib/github";
+import { fetchRepoContext, fetchRepoEvidence, type ReviewEffort } from "@/lib/github";
 import { consumeAIQuota } from "@/lib/usage";
 
 type AIGrade = {
@@ -30,6 +30,11 @@ export async function POST(
     return NextResponse.json({ error: "Daily automated-grading allowance reached.", quota }, { status: 429 });
   }
 
+  const body = await request.json().catch(() => ({}));
+  const effort: ReviewEffort = ["lite", "balanced", "deep"].includes(String(body.effort))
+    ? (String(body.effort) as ReviewEffort)
+    : "balanced";
+
   const { id } = await params;
   if (!ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid submission." }, { status: 400 });
 
@@ -44,8 +49,12 @@ export async function POST(
   if (!module) return NextResponse.json({ error: "Module no longer exists." }, { status: 400 });
 
   let evidence;
+  let repoContext;
   try {
-    evidence = await fetchRepoEvidence(String(submission.githubUrl));
+    [evidence, repoContext] = await Promise.all([
+      fetchRepoEvidence(String(submission.githubUrl)),
+      fetchRepoContext(String(submission.githubUrl), effort),
+    ]);
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Repository could not be inspected." },
@@ -84,7 +93,13 @@ export async function POST(
           "\nRepository: " + evidence.fullName +
           "\nLanguage: " + evidence.language +
           "\nREADME excerpt:\n" + evidence.readme.slice(0, 5000) +
-          "\nLearner notes:\n" + String(submission.notes || "").slice(0, 2000),
+          "\nLearner notes:\n" + String(submission.notes || "").slice(0, 2000) +
+          "\nReview effort: " + effort +
+          "\nRepository context files:\n" +
+          repoContext.files
+            .map((file) => "\n--- " + file.path + " ---\n" + file.content)
+            .join("\n")
+            .slice(0, effort === "deep" ? 42000 : effort === "lite" ? 10000 : 24000),
       },
     ]);
     aiGrade = parseJsonObject<AIGrade>(response);
@@ -112,6 +127,8 @@ export async function POST(
       "Publish a live deployment when appropriate.",
     ],
     summary: aiGrade?.summary || "Automated evidence-based assessment completed.",
+    reviewEffort: effort,
+    contextFiles: repoContext.files.map((file) => file.path),
     gradedAt: new Date(),
   };
 
@@ -120,5 +137,13 @@ export async function POST(
     { $set: { grade, status: "graded", updatedAt: new Date() } },
   );
 
-  return NextResponse.json({ grade, quota });
+  return NextResponse.json({
+    grade,
+    quota,
+    reviewContext: {
+      effort,
+      filesReviewed: repoContext.files.map((file) => file.path),
+      repositoryTreeTruncated: repoContext.truncated,
+    },
+  });
 }
