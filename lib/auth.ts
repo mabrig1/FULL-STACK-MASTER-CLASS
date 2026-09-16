@@ -12,6 +12,7 @@ export type SessionUser = {
   role: UserRole;
   plan: string;
   entitlements: string[];
+  emailVerified: boolean;
 };
 
 export const SESSION_COOKIE = "fsmc_session";
@@ -81,6 +82,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     role: (user.role || "student") as UserRole,
     plan: String(user.plan || "free"),
     entitlements: Array.isArray(user.entitlements) ? user.entitlements.map(String) : [],
+    emailVerified: Boolean(user.emailVerifiedAt),
   };
 }
 
