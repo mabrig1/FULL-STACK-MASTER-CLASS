@@ -344,3 +344,106 @@
   .readinessHero { align-items: start; flex-wrap: wrap; }
   .readinessHero p { margin-left: 0; width: 100%; }
 }
+
+.onboardingCard,
+.securityCard {
+  max-width: 760px;
+}
+.stackForm label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.adminCommandBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 28px 0 14px;
+}
+.adminCommandBar a {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(123,247,181,.04);
+  font-size: 13px;
+  font-weight: 700;
+}
+.adminMetrics {
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 14px;
+}
+.adminSearch {
+  display: flex;
+  gap: 10px;
+}
+.adminSearch input {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #071410;
+  color: var(--text);
+  padding: 13px 15px;
+}
+.learnerRow {
+  display: grid;
+  grid-template-columns: minmax(200px,1.5fr) repeat(4,minmax(90px,.7fr)) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.learnerRow small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.learnerRow > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.learnerRow > span strong {
+  display: block;
+  color: var(--text);
+  margin-top: 4px;
+}
+.auditList {
+  display: grid;
+  gap: 8px;
+}
+.auditList article {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+}
+.auditList small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.auditList pre {
+  margin: 0;
+  overflow: auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+.auditList time {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  .learnerRow { grid-template-columns: 1fr 1fr 1fr; }
+  .auditList article { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .adminMetrics { grid-template-columns: 1fr 1fr; }
+  .adminSearch { flex-direction: column; }
+  .learnerRow { grid-template-columns: 1fr; }
+}
