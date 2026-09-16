@@ -10,6 +10,7 @@ const STORAGE_KEY = "fsmc-progress-v1";
 export default function CourseDashboard() {
   const [completed, setCompleted] = useState<number[]>([]);
   const [syncMode, setSyncMode] = useState<"local" | "cloud">("local");
+  const [adaptive, setAdaptive] = useState<any>(null);
 
   useEffect(() => {
     try {
@@ -27,14 +28,26 @@ export default function CourseDashboard() {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudCompleted));
       })
       .catch(() => undefined);
+
+    fetch("/api/adaptive")
+      .then(async (response) => ({ ok: response.ok, data: await response.json() }))
+      .then(({ ok, data }) => {
+        if (ok) setAdaptive(data);
+      })
+      .catch(() => undefined);
   }, []);
 
   const progress = Math.round((completed.length / courseModules.length) * 100);
-  const nextModule = courseModules.find((module) => !completed.includes(module.id)) ?? courseModules[0];
+  const adaptiveNext = adaptive?.recommendation?.moduleId
+    ? courseModules.find((module) => module.id === adaptive.recommendation.moduleId)
+    : null;
+  const nextModule = adaptiveNext ?? courseModules.find((module) => !completed.includes(module.id)) ?? courseModules[0];
 
   const xp = completed.length * 120;
   const streak = Math.min(30, Math.max(1, Math.ceil(completed.length / 2)));
-  const skillScore = Math.min(100, 8 + completed.length * 2);
+  const skillScore = adaptive?.mastery?.length
+    ? Math.round(adaptive.mastery.reduce((sum: number, item: any) => sum + Number(item.score || 0), 0) / adaptive.mastery.length)
+    : Math.min(100, 8 + completed.length * 2);
 
   const phaseProgress = useMemo(
     () =>
@@ -64,13 +77,14 @@ export default function CourseDashboard() {
       </section>
 
       <section className="statGrid">
-        <article><span>Skill score</span><strong>{skillScore}/100</strong><small>Based on completed evidence</small></article>
+        <article><span>Mastery score</span><strong>{skillScore}/100</strong><small>Weighted evidence across the mastery graph</small></article>
         <article><span>Build XP</span><strong>{xp.toLocaleString()}</strong><small>Earned by shipping modules</small></article>
         <article><span>Momentum</span><strong>{streak} days</strong><small>Learning momentum indicator</small></article>
         <article><span>Portfolio proof</span><strong>{completed.length}</strong><small>Modules converted into evidence</small></article>
       </section>
 
       <section className="quickRail">
+        <Link href="/adaptive"><span>ADAPT</span><strong>Learning intelligence →</strong></Link>
         <Link href="/study-plan"><span>AI PLAN</span><strong>Personalized route →</strong></Link>
         <Link href="/submissions"><span>VERIFY</span><strong>Project proof →</strong></Link>
         <Link href="/orchestrator"><span>AGENTS</span><strong>Run a mission →</strong></Link>
@@ -81,12 +95,12 @@ export default function CourseDashboard() {
         <div className="panel">
           <div className="panelHeading">
             <div>
-              <span className="eyebrow">NEXT BEST ACTION</span>
+              <span className="eyebrow">NEXT BEST ACTION{adaptive?.recommendation?.type ? " · " + adaptive.recommendation.type.toUpperCase() : ""}</span>
               <h2>{nextModule.title}</h2>
             </div>
             <span className="pill">{nextModule.level}</span>
           </div>
-          <p>{nextModule.challenge}</p>
+          <p>{adaptive?.recommendation?.reason || nextModule.challenge}</p>
           <div className="nextMeta">
             <span>≈ {nextModule.minutes} min core lesson</span>
             <span>Module {nextModule.id} of {courseModules.length}</span>
@@ -106,12 +120,19 @@ export default function CourseDashboard() {
             <span>04 · Fix it</span>
             <span>05 · Verify it</span>
             <span>06 · Ship it</span>
+            <span>07 · Revisit it when evidence decays</span>
+            {adaptive?.cognitiveLoad && (
+              <span>LOAD · {adaptive.cognitiveLoad.level.toUpperCase()} · {adaptive.cognitiveLoad.score}/100</span>
+            )}
           </div>
         </div>
       </section>
 
       <AgentPanel
-        context={"Dashboard context. Completed " + completed.length + " of " + courseModules.length + " modules. Next recommended module: " + nextModule.title + ". Sync mode: " + syncMode + "."}
+        context={"Dashboard context. Completed " + completed.length + " of " + courseModules.length +
+              " modules. Adaptive recommendation: " + nextModule.title +
+              ". Mastery score: " + skillScore + "/100. Cognitive load: " +
+              (adaptive?.cognitiveLoad?.level || "unknown") + ". Sync mode: " + syncMode + "."}
       />
 
       <section className="curriculumSection">
