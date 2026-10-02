@@ -17,6 +17,7 @@ export async function GET() {
     recentSubmissions,
     aiUsageToday,
     onboardedLearners,
+    referralCommissions,
   ] = await Promise.all([
     db.collection(collections.users).countDocuments({ role: "student" }),
     db.collection(collections.submissions).countDocuments(),
@@ -26,10 +27,18 @@ export async function GET() {
     db.collection(collections.submissions).find().sort({ createdAt: -1 }).limit(10).toArray(),
     db.collection(collections.aiUsage).find({ date: today }).toArray(),
     db.collection(collections.users).countDocuments({ role: "student", onboardingComplete: true }),
+    db.collection(collections.referralCommissions).find().toArray(),
   ]);
 
   const revenueNgn = payments.reduce((sum, item) => sum + Number(item.amountNgn || 0), 0);
   const aiCallsToday = aiUsageToday.reduce((sum, item) => sum + Number(item.count || 0), 0);
+  const referralCommissionNgn = referralCommissions.reduce(
+    (sum, item) => sum + Number(item.commissionKobo || 0) / 100,
+    0,
+  );
+  const referralPendingNgn = referralCommissions
+    .filter((item) => item.status === "pending")
+    .reduce((sum, item) => sum + Number(item.commissionKobo || 0) / 100, 0);
 
   return NextResponse.json({
     metrics: {
@@ -40,6 +49,9 @@ export async function GET() {
       cohorts,
       revenueNgn,
       aiCallsToday,
+      referralSales: referralCommissions.length,
+      referralCommissionNgn,
+      referralPendingNgn,
     },
     recentSubmissions: recentSubmissions.map((item) => ({
       id: item._id.toString(),
