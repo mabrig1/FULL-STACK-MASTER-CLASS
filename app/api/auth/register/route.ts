@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { collections, getDb, isDatabaseConfigured } from "@/lib/db";
 import {
   SESSION_COOKIE,
@@ -15,8 +15,9 @@ import {
 import { createNotification } from "@/lib/notifications";
 import { issueAccountToken } from "@/lib/account-tokens";
 import { isEmailConfigured, sendTransactionalEmail } from "@/lib/email";
+import { REFERRAL_COOKIE, findReferrerByCode, normalizeReferralCode } from "@/lib/referrals";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "Account storage is not configured yet." }, { status: 503 });
   }
@@ -52,12 +53,17 @@ export async function POST(request: Request) {
   }
 
   const role = roleForEmail(email);
+  const referralCode = normalizeReferralCode(request.cookies.get(REFERRAL_COOKIE)?.value);
+  const referrer = referralCode ? await findReferrerByCode(referralCode) : null;
   const now = new Date();
   const result = await db.collection(collections.users).insertOne({
     name,
     email,
     passwordHash: hashPassword(password),
     role,
+    referredByUserId: referrer?._id?.toString() || null,
+    referredByCode: referrer ? String(referrer.referralCode || referralCode) : null,
+    referredAt: referrer ? now : null,
     plan: role === "admin" || role === "instructor" ? "staff" : "free",
     entitlements: role === "admin" || role === "instructor" ? ["academy", "admin"] : ["free-course"],
     profile: {
