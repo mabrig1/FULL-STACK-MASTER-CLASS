@@ -12,6 +12,9 @@ type Overview = {
     cohorts: number;
     revenueNgn: number;
     aiCallsToday: number;
+    referralSales: number;
+    referralCommissionNgn: number;
+    referralPendingNgn: number;
   };
   recentSubmissions: Array<{
     id: string;
@@ -52,6 +55,7 @@ export default function AdminStudio() {
         <Link href="/admin/course">Course Studio →</Link>
         <Link href="/admin/gradebook">Assessment analytics →</Link>
         <Link href="/admin/announcements">Announcements →</Link>
+        <Link href="/admin/referrals">Referral programme →</Link>
         <Link href="/admin/learners">Manage learners →</Link>
         <Link href="/admin/audit">Audit trail →</Link>
         <Link href="/cohorts">Cohorts →</Link>
@@ -69,6 +73,9 @@ export default function AdminStudio() {
             <article><strong>{data.metrics.verified}/{data.metrics.submissions}</strong><span>verified projects</span></article>
             <article><strong>{data.metrics.cohorts}</strong><span>cohorts</span></article>
             <article><strong>₦{data.metrics.revenueNgn.toLocaleString()}</strong><span>verified revenue</span></article>
+            <article><strong>{data.metrics.referralSales}</strong><span>referral sales</span></article>
+            <article><strong>₦{data.metrics.referralCommissionNgn.toLocaleString()}</strong><span>referral commission</span></article>
+            <article><strong>₦{data.metrics.referralPendingNgn.toLocaleString()}</strong><span>pending payout</span></article>
           </section>
 
           <section className="commercialSection">
