@@ -1,4 +1,5 @@
 import { collections, getDb } from "@/lib/db";
+import { creditReferralCommission } from "@/lib/referrals";
 
 export function masterclassPriceNgn() {
   const value = Number(process.env.MASTERCLASS_PRICE_NGN || "100000");
@@ -61,6 +62,12 @@ export async function grantPaidAccess(reference: string, payload: any) {
       $addToSet: { entitlements: { $each: ["academy", "projects", "ai", "certificates", "cohorts"] } },
     },
   );
+
+  try {
+    await creditReferralCommission(payment, payload);
+  } catch (error) {
+    console.error("Referral commission credit failed", error);
+  }
 
   return payment;
 }
