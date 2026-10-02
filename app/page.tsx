@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { courseModules, phases } from "@/lib/course";
+import HomeShowcase from "@/components/home-showcase";
 
 const features = [
   ["Adaptive Mastery Graph", "The platform recommends the next build from your completion evidence instead of forcing passive linear consumption."],
@@ -38,18 +39,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="heroTerminal">
-          <div className="terminalBar"><span /><span /><span /></div>
-          <p className="terminalMuted">$ fullstack-masterclass start</p>
-          <p>✓ Learning graph loaded</p>
-          <p>✓ Project evidence tracker ready</p>
-          <p>✓ Mentor swarm online</p>
-          <p>✓ Code review agent standing by</p>
-          <div className="terminalPrompt">
-            <span>mentor&gt;</span>
-            <p>Build something the world can use.</p>
-          </div>
-        </div>
+        <HomeShowcase />
       </section>
 
       <section className="ticker">
@@ -101,6 +91,25 @@ export default function Home() {
               </article>
             );
           })}
+        </div>
+      </section>
+
+      <section className="referralPromo">
+        <div>
+          <span className="eyebrow">BUILD · SHARE · EARN</span>
+          <h2>Turn your learning network into a 15% referral income stream.</h2>
+          <p>
+            Every learner gets a tracked referral link. When someone joins through your
+            link and completes a verified paid enrolment, your commission is recorded
+            automatically in your referral dashboard.
+          </p>
+          <Link className="primaryButton inlineButton" href="/referrals">
+            Open referral dashboard →
+          </Link>
+        </div>
+        <div className="referralOffer">
+          <strong>15%</strong>
+          <span>commission on every verified paid referral</span>
         </div>
       </section>
 
