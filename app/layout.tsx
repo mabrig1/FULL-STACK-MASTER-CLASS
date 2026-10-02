@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import "./commercial.css";
+import "./upgrade.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://fullstack.mabrigkorie.org"),
@@ -38,8 +39,9 @@ export default function RootLayout({
           <nav>
             <Link href="/dashboard">Academy</Link>
             <Link href="/platform">Platform</Link>
-            <Link href="/sandbox">Sandbox</Link>
-            <Link href="/notifications">Notifications</Link>
+            <Link href="/pricing">Pricing</Link>
+            <Link href="/referrals">Earn 15%</Link>
+            <Link href="/admin">Admin</Link>
             <Link href="/account">Account</Link>
           </nav>
         </header>

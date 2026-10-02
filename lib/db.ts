@@ -29,6 +29,7 @@ export const collections = {
   conceptMastery: "concept_mastery",
   remediationPlans: "remediation_plans",
   modelBenchmarks: "model_benchmarks",
+  referralCommissions: "referral_commissions",
 } as const;
 
 function buildMongoUri() {
@@ -99,6 +100,7 @@ function ensureIndexes(db: Db) {
     indexesPromise = (async () => {
       await Promise.all([
         db.collection(collections.users).createIndex({ email: 1 }, { unique: true }),
+        db.collection(collections.users).createIndex({ referralCode: 1 }, { unique: true, sparse: true }),
         db.collection(collections.sessions).createIndex({ tokenHash: 1 }, { unique: true }),
         db.collection(collections.sessions).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
         db.collection(collections.progress).createIndex({ userId: 1, moduleId: 1 }, { unique: true }),
@@ -106,6 +108,8 @@ function ensureIndexes(db: Db) {
         db.collection(collections.memories).createIndex({ userId: 1, createdAt: -1 }),
         db.collection(collections.studyPlans).createIndex({ userId: 1, createdAt: -1 }),
         db.collection(collections.payments).createIndex({ reference: 1 }, { unique: true }),
+        db.collection(collections.referralCommissions).createIndex({ paymentReference: 1 }, { unique: true }),
+        db.collection(collections.referralCommissions).createIndex({ referrerUserId: 1, status: 1, createdAt: -1 }),
         db.collection(collections.cohorts).createIndex({ code: 1 }, { unique: true }),
         db.collection(collections.peerReviews).createIndex({ reviewerId: 1, submissionId: 1 }, { unique: true }),
         db.collection(collections.certificates).createIndex({ certificateId: 1 }, { unique: true }),

