@@ -1,11 +1,12 @@
 import { randomBytes } from "crypto";
 import { ObjectId } from "mongodb";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { collections, getDb } from "@/lib/db";
 import { masterclassPriceNgn, paystackRequest } from "@/lib/payments";
+import { REFERRAL_COOKIE, resolveReferralForUser } from "@/lib/referrals";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   if (!process.env.PAYSTACK_SECRET_KEY) {
@@ -19,6 +20,10 @@ export async function POST() {
 
   const db = await getDb();
   const userObjectId = new ObjectId(user.id);
+  const referral = await resolveReferralForUser(
+    user.id,
+    request.cookies.get(REFERRAL_COOKIE)?.value,
+  );
   await db.collection(collections.payments).insertOne({
     userId: user.id,
     userObjectId,
@@ -29,6 +34,8 @@ export async function POST() {
     amountKobo,
     currency: "NGN",
     status: "initialized",
+    referredByUserId: referral?.userId || null,
+    referralCode: referral?.code || null,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -45,6 +52,7 @@ export async function POST() {
           userId: user.id,
           plan: "masterclass",
           product: "Full Stack Master Class",
+          referralCode: referral?.code || "",
         },
       }),
     });
