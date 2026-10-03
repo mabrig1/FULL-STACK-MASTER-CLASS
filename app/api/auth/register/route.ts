@@ -16,6 +16,7 @@ import { createNotification } from "@/lib/notifications";
 import { issueAccountToken } from "@/lib/account-tokens";
 import { isEmailConfigured, sendTransactionalEmail } from "@/lib/email";
 import { REFERRAL_COOKIE, findReferrerByCode, normalizeReferralCode } from "@/lib/referrals";
+import { syncFullstackLearner } from "@/lib/fintigen";
 
 export async function POST(request: NextRequest) {
   if (!isDatabaseConfigured()) {
@@ -118,6 +119,11 @@ export async function POST(request: NextRequest) {
     metadata: { role, verificationSent },
   });
 
+  const fintigenSync = await syncFullstackLearner(userId, {
+    event: "registration",
+    accessSource: "registration",
+  });
+
   const response = NextResponse.json({
     user: {
       id: userId,
@@ -128,6 +134,7 @@ export async function POST(request: NextRequest) {
       emailVerified: false,
     },
     verificationSent,
+    enrollmentSync: fintigenSync.ok ? "synced" : fintigenSync.skipped ? "not-configured" : "queued-for-retry",
   });
   response.cookies.set(SESSION_COOKIE, session.token, {
     httpOnly: true,
