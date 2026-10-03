@@ -4,6 +4,7 @@ import { canManageAcademy, getCurrentUser } from "@/lib/auth";
 import { collections, getDb } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/security";
 import { createNotification } from "@/lib/notifications";
+import { syncFullstackLearner } from "@/lib/fintigen";
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -91,5 +92,15 @@ export async function PATCH(request: Request) {
     metadata: { learnerId, plan },
   });
 
-  return NextResponse.json({ updated: true, learnerId, plan });
+  const sync = await syncFullstackLearner(learnerId, {
+    event: "fullstack-admin-access",
+    accessSource: "fullstack-admin",
+  });
+
+  return NextResponse.json({
+    updated: true,
+    learnerId,
+    plan,
+    enrollmentSync: sync.ok ? "synced" : sync.skipped ? "not-configured" : "retry-later",
+  });
 }
