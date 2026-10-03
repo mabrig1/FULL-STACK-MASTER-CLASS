@@ -45,16 +45,50 @@ export default function AdminLearners() {
     });
     const data = await response.json();
     setBusy("");
-    setMessage(data.error || "Learner access updated.");
+    setMessage(data.error || "Learner access updated and synchronized with Fintigen.");
     if (response.ok) await load(query);
+  }
+
+  async function syncAll() {
+    setBusy("sync-all");
+    setMessage("Synchronizing learner records with the Fintigen Admin Dashboard…");
+    const response = await fetch("/api/admin/fintigen-sync", { method: "POST" });
+    const data = await response.json().catch(() => ({}));
+    setBusy("");
+    if (!response.ok) {
+      setMessage(data.error || "Fintigen synchronization failed.");
+      return;
+    }
+    setMessage(
+      "Fintigen sync complete: " +
+      String(data.synced || 0) +
+      " synced, " +
+      String(data.failed || 0) +
+      " need retry.",
+    );
   }
 
   return (
     <main className="commercialPage">
       <section className="commercialHero">
-        <span className="eyebrow">LEARNER OPERATIONS</span>
+        <span className="eyebrow">LEARNER OPERATIONS · FINTIGEN CONNECTED</span>
         <h1>See who is learning and control access deliberately.</h1>
-        <p>Search students, inspect proof signals and grant or revoke paid Master Class access.</p>
+        <p>
+          Search students, inspect proof signals, grant Master Class access, and keep the
+          central Fintigen enrollment dashboard synchronized.
+        </p>
+        <div className="actionRow">
+          <button
+            className="primaryButton"
+            disabled={Boolean(busy)}
+            onClick={syncAll}
+          >
+            {busy === "sync-all" ? "Syncing…" : "Sync all learners to Fintigen"}
+          </button>
+          <a className="secondaryButton" href="https://www.fintigen.com/admin/training" target="_blank" rel="noreferrer">
+            Open Fintigen enrollment dashboard ↗
+          </a>
+        </div>
       </section>
 
       <section className="commercialSection">
