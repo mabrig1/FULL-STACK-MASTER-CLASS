@@ -1,5 +1,6 @@
 import { collections, getDb } from "@/lib/db";
 import { creditReferralCommission } from "@/lib/referrals";
+import { syncFullstackLearner } from "@/lib/fintigen";
 
 export function masterclassPriceNgn() {
   const value = Number(process.env.MASTERCLASS_PRICE_NGN || "100000");
@@ -68,6 +69,11 @@ export async function grantPaidAccess(reference: string, payload: any) {
   } catch (error) {
     console.error("Referral commission credit failed", error);
   }
+
+  await syncFullstackLearner(String(payment.userObjectId), {
+    event: "payment-success",
+    accessSource: "purchase",
+  });
 
   return payment;
 }
