@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 import { collections, getDb } from "@/lib/db";
 import { courseModules } from "@/lib/course";
 
-type SyncContext = {
+export type SyncContext = {
   event?: string;
   accessSource?: string;
   lastModuleId?: number | null;
@@ -19,15 +19,12 @@ export function isFintigenIntegrationConfigured() {
   return Boolean(apiUrl && secret);
 }
 
-export async function syncFullstackLearner(userId: string, context: SyncContext = {}) {
-  const { apiUrl, secret } = config();
-  if (!apiUrl || !secret || !ObjectId.isValid(userId)) {
-    return { ok: false, skipped: true, reason: "integration-not-configured" };
-  }
+export async function getFullstackLearnerSnapshot(userId: string, context: SyncContext = {}) {
+  if (!ObjectId.isValid(userId)) return null;
 
   const db = await getDb();
   const user = await db.collection(collections.users).findOne({ _id: new ObjectId(userId) });
-  if (!user) return { ok: false, skipped: true, reason: "learner-not-found" };
+  if (!user) return null;
 
   const [completedModules, verifiedProjects, latestProgress] = await Promise.all([
     db.collection(collections.progress).countDocuments({ userId, status: "completed" }),
@@ -36,14 +33,14 @@ export async function syncFullstackLearner(userId: string, context: SyncContext 
   ]);
 
   const totalModules = courseModules.length;
-  const plan = String(user.plan || "free");
   const event = context.event || "sync";
-  const payload = {
+
+  return {
     learnerId: userId,
     name: String(user.name || ""),
     email: String(user.email || ""),
     role: String(user.role || "student"),
-    plan,
+    plan: String(user.plan || "free"),
     entitlements: Array.isArray(user.entitlements) ? user.entitlements.map(String) : [],
     onboardingComplete: Boolean(user.onboardingComplete),
     emailVerified: Boolean(user.emailVerifiedAt),
@@ -61,6 +58,18 @@ export async function syncFullstackLearner(userId: string, context: SyncContext 
     event,
     occurredAt: new Date().toISOString(),
   };
+}
+
+export async function syncFullstackLearner(userId: string, context: SyncContext = {}) {
+  const { apiUrl, secret } = config();
+  if (!apiUrl || !secret) {
+    return { ok: false, skipped: true, reason: "integration-not-configured" };
+  }
+
+  const payload = await getFullstackLearnerSnapshot(userId, context);
+  if (!payload) {
+    return { ok: false, skipped: true, reason: "learner-not-found" };
+  }
 
   try {
     const response = await fetch(apiUrl + "/integrations/fullstack/learner-sync", {
