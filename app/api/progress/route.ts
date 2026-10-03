@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { collections, getDb } from "@/lib/db";
 import { getModule } from "@/lib/course";
+import { syncFullstackLearner } from "@/lib/fintigen";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -56,5 +57,16 @@ export async function POST(request: Request) {
     await db.collection(collections.progress).deleteOne({ userId: user.id, moduleId });
   }
 
-  return NextResponse.json({ ok: true, moduleId, completed });
+  const sync = await syncFullstackLearner(user.id, {
+    event: completed ? "module-completed" : "module-reopened",
+    accessSource: "learning-progress",
+    lastModuleId: moduleId,
+  });
+
+  return NextResponse.json({
+    ok: true,
+    moduleId,
+    completed,
+    enrollmentSync: sync.ok ? "synced" : sync.skipped ? "not-configured" : "retry-later",
+  });
 }
